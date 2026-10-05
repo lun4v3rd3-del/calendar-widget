@@ -31,9 +31,12 @@ class Calendar {
     }
 
     generate() {
-        const year = new Date(this.date).getFullYear();
+        const year = this.date.getFullYear();
         const month = this.date.getMonth();
-        const today = this.date.getDate();
+
+        const now = new Date();
+        const isCurrentMonthAndYear = now.getFullYear() === year && now.getMonth() === month;
+        const today = now.getDate();
 
         const monthNames = [
             "ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ",
@@ -55,7 +58,10 @@ class Calendar {
             const btn = document.createElement("div");
             btn.className = 'week-select-btn';
             btn.textContent = '>>';
-            btn.addEventListener('click', () => this.changeSelected(week));
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.changeSelected(week);
+            });
 
             week.appendChild(btn);
             return week;
@@ -64,22 +70,23 @@ class Calendar {
         let weekDiv = createWeekRow();
         const totalDays = new Date(year, month + 1, 0).getDate();
 
+        // Заполнение пустых дней прошлого месяца
         for (let i = startDayOfWeek; i > 0; i--) {
             const emptyDiv = document.createElement('div');
             emptyDiv.classList.add('day', 'empty');
-            let date = new Date(firstDayOfMonth - i * 24 * 60 * 60 * 1000);
-            emptyDiv.textContent = date.getDate().toString()
+            let prevDate = new Date(firstDayOfMonth.getTime() - i * 24 * 60 * 60 * 1000);
+            emptyDiv.textContent = prevDate.getDate().toString();
 
             emptyDiv.addEventListener("click", () => {
-                this.date = date;
-                this.generate()
-            })
+                this.date = prevDate;
+                this.generate();
+            });
 
             this.a.push(emptyDiv);
             weekDiv.appendChild(emptyDiv);
         }
-        let day = 1
-        for (;day <= totalDays; day++) {
+
+        for (let day = 1; day <= totalDays; day++) {
             const dayDiv = document.createElement('div');
             dayDiv.classList.add('day');
             dayDiv.textContent = day;
@@ -90,7 +97,7 @@ class Calendar {
 
             dayDiv.dataset.dayOfWeek = dayOfWeek;
 
-            if (day === today) {
+            if (isCurrentMonthAndYear && day === today) {
                 this.selectedElement = dayDiv;
                 dayDiv.classList.add('selected');
             }
@@ -109,23 +116,22 @@ class Calendar {
             }
         }
 
+        // Заполнение пустых дней следующего месяца (интерактивные)
         for (let i = 1; weekDiv.childElementCount <= 7 && weekDiv.childElementCount !== 1; i++) {
             const emptyDiv = document.createElement('div');
             emptyDiv.classList.add('day', 'empty');
-            emptyDiv.textContent = i.toString()
+            emptyDiv.textContent = i.toString();
 
             emptyDiv.addEventListener("click", () => {
-                let year = this.date.getFullYear()
-                let month = this.date.getMonth() + 1
-
-                this.date = new Date(new Date(year, month, 1).getTime() + (i - 1) * 24 * 60 * 60 * 1000);
-                this.generate()
-            })
+                this.date = new Date(year, month + 1, i);
+                this.generate();
+            });
 
             this.a.push(emptyDiv);
             weekDiv.appendChild(emptyDiv);
         }
 
+        // Дозаполнение строки до полной недели, если необходимо
         if (weekDiv.childElementCount > 1) {
             while (weekDiv.childElementCount < 8) {
                 const emptyDiv = document.createElement('div');
@@ -136,11 +142,13 @@ class Calendar {
         }
 
         if (this.shedule && this.selectedElement) {
-            this.pullShedule(this.selectedElement);
+            if (this.selectedElement.classList.contains("day")) {
+                this.pullShedule(this.selectedElement);
+            } else if (this.selectedElement.classList.contains("calendar-week")) {
+                this.pullWeekShedule(this.selectedElement);
+            }
         }
     }
-
-
 
     changeSelected(div) {
         if (div.classList.contains("calendar-week")) {
@@ -161,8 +169,6 @@ class Calendar {
     pullShedule(dayDiv) {
         const titleHandler = document.getElementsByClassName("schedule-title")[0];
         const contentHandler = document.getElementsByClassName("schedule-content")[0];
-        const container = document.createElement("div")
-        container.classList.add("weekly-day-card")
 
         if (!titleHandler || !contentHandler) return;
 
@@ -186,132 +192,118 @@ class Calendar {
         titleHandler.textContent = dayData.name.toUpperCase();
 
         if (dayData.lessons && dayData.lessons.length > 0) {
+            const container = document.createElement("div");
+            container.classList.add("weekly-day-card");
             dayData.lessons.forEach(lesson => {
                 container.appendChild(this.formatLesson(lesson));
             });
+            contentHandler.appendChild(container);
         } else {
             contentHandler.textContent = "ЗАНЯТИЙ НЕТ";
         }
-
-        contentHandler.appendChild(container)
     }
-
     formatLesson(lesson) {
         const lessonDiv = document.createElement('div');
         lessonDiv.className = 'lesson-item';
         lessonDiv.style.marginBottom = '15px';
 
-        let lessonName = this.checkLesson(lesson.name)
+        let lessonName = this.checkLesson(lesson.name);
         let isMasked = true;
 
-        if (this.checkLesson(lesson.name) === undefined) {
-            if (lesson.name === null) {
-                lessonName = "Название не указано";
-            }
-            else {
-                lessonName = lesson.name;
-            }
+        if (lessonName === undefined) {
+            lessonName = (lesson.name === null || lesson.name === undefined) ? "Название не указано" : lesson.name;
             isMasked = false;
         }
 
-        console.log(lesson.name + " " + isMasked)
-
         lessonDiv.innerHTML = `
-                    <div class="lesson-header" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                        <div style="font-size: 11px; color: #777; margin-bottom: 4px;">[ ВРЕМЯ: ${lesson.time || '—'} ]</div>
-                        <span style="display: flex; gap: 8px;">
-                            <div class="drop-trigger" style="color: dimgray; text-decoration: underline; cursor: pointer; display: ${isMasked ? 'inline-block' : 'none'};">сбросить</div>
-                            <div class="edit-trigger" style="color: blue; text-decoration: underline; cursor: pointer;">изменить</div>  
-                        </span>
-                    </div>
-                    <div class="lesson-name" style="font-style: italic; line-height: 1.3;">${lessonName}</div>
-                   
-                    <div class="edit-form" style="display: none; margin-top: 10px; flex-direction: column; gap: 8px;">
-                        <textarea class="edit-input" style="width: 100%; padding: 6px; box-sizing: border-box; font-family: inherit; font-size: 13px;" rows="3">${lesson.name || ''}</textarea>
-                        <button class="save-btn" style="align-self: flex-end; padding: 4px 12px; cursor: pointer;">Сохранить</button>
-                    </div>
-                `;
+            <div class="lesson-header" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <div style="font-size: 11px; color: #777; margin-bottom: 4px;">[ ВРЕМЯ: ${lesson.time || '—'} ]</div>
+                <span style="display: flex; gap: 8px;">
+                    <div class="drop-trigger" style="color: dimgray; text-decoration: underline; cursor: pointer; display: ${isMasked ? 'inline-block' : 'none'};">сбросить</div>
+                    <div class="edit-trigger" style="color: blue; text-decoration: underline; cursor: pointer;">изменить</div>  
+                </span>
+            </div>
+            <div class="lesson-name" style="font-style: italic; line-height: 1.3;"></div>
+           
+            <div class="edit-form" style="display: none; margin-top: 10px; flex-direction: column; gap: 8px;">
+                <textarea class="edit-input" style="width: 100%; box-sizing: border-box;"></textarea>
+                <div style="display: flex; gap: 8px;">
+                    <button class="save-btn" style="cursor: pointer;">Сохранить</button>
+                    <button class="cancel-btn" style="cursor: pointer;">Отмена</button>
+                </div>
+            </div>
+        `;
 
+        const lessonNameDiv = lessonDiv.querySelector('.lesson-name');
+        lessonNameDiv.textContent = lessonName;
 
         const editTrigger = lessonDiv.querySelector('.edit-trigger');
         const dropTrigger = lessonDiv.querySelector('.drop-trigger');
         const editForm = lessonDiv.querySelector('.edit-form');
         const editInput = lessonDiv.querySelector('.edit-input');
         const saveBtn = lessonDiv.querySelector('.save-btn');
-        const lessonNameDiv = lessonDiv.querySelector('.lesson-name');
+        const cancelBtn = lessonDiv.querySelector('.cancel-btn');
+
+        const refreshCurrentView = () => {
+            if (!this.selectedElement) return;
+            if (this.selectedElement.classList.contains("day")) {
+                this.pullShedule(this.selectedElement);
+            } else if (this.selectedElement.classList.contains("calendar-week")) {
+                this.pullWeekShedule(this.selectedElement);
+            }
+        };
 
         editTrigger.addEventListener('click', () => {
-            editTrigger.style.display = 'none';
             editForm.style.display = 'flex';
+            editTrigger.style.display = 'none';
+            editInput.value = lessonNameDiv.textContent === "Название не указано" ? "" : lessonNameDiv.textContent;
+        });
 
-            editInput.focus();
+        cancelBtn.addEventListener('click', () => {
+            editForm.style.display = 'none';
+            editTrigger.style.display = 'block';
         });
 
         dropTrigger.addEventListener('click', () => {
-            dropTrigger.style.display = 'none';
             this.dropLesson(lesson.name);
-            lessonNameDiv.innerHTML = lesson.name;
-
-            console.log(lesson.name);
-            if (this.selectedElement.classList.contains("day")) {
-                this.pullShedule(this.selectedElement);
-            }
-            else if (this.selectedElement.classList.contains("day")) {
-                this.pullWeekShedule(this.selectedElement);
-            }
+            refreshCurrentView();
         });
 
         saveBtn.addEventListener('click', () => {
             const rawData = lesson.name;
             const newData = editInput.value.trim();
 
-            dropTrigger.style.display = 'inline-block';
-
-            if (typeof this.maskLesson === 'function') {
-                this.maskLesson(rawData, newData);
-            } else if (typeof maskLesson === 'function') {
-                maskLesson(rawData, newData);
-            } else {
-                localStorage.setItem(rawData, newData);
-            }
+            this.maskLesson(rawData, newData);
 
             lessonNameDiv.textContent = newData || 'Название не указано';
             editForm.style.display = 'none';
             editTrigger.style.display = 'block';
 
-            if (this.selectedElement.classList.contains("day")) {
-                this.pullShedule(this.selectedElement);
-            }
-            else if (this.selectedElement.classList.contains("day")) {
-                this.pullWeekShedule(this.selectedElement);
-            }
+            refreshCurrentView();
         });
 
-        return lessonDiv
+        return lessonDiv;
+    }
+
+    _getMasks() {
+        const masksData = localStorage.getItem('schedule_masks');
+        return masksData ? JSON.parse(masksData) : {};
     }
 
     maskLesson(rawData, newData) {
-        const masksData = localStorage.getItem('schedule_masks');
-        let masksMap = masksData ? JSON.parse(masksData) : {};
-
+        const masksMap = this._getMasks();
         masksMap[rawData] = newData;
-
         localStorage.setItem('schedule_masks', JSON.stringify(masksMap));
     }
 
     checkLesson(lessonName) {
-        const masksData = localStorage.getItem('schedule_masks');
-        let masksMap = masksData ? JSON.parse(masksData) : {};
-
-        return masksMap[lessonName]
+        const masksMap = this._getMasks();
+        return masksMap[lessonName];
     }
 
     dropLesson(lessonName) {
-        const masksData = localStorage.getItem('schedule_masks');
-        let masksMap = masksData ? JSON.parse(masksData) : {};
-
+        const masksMap = this._getMasks();
         delete masksMap[lessonName];
-
         localStorage.setItem('schedule_masks', JSON.stringify(masksMap));
     }
 
@@ -329,7 +321,7 @@ class Calendar {
             return;
         }
 
-        const groupData = this.shedule.groups["11-505"];
+        const groupData = this.shedule.groups[this.selectedGroup];
         const daysData = groupData ? groupData.days : [];
 
         if (!daysData || daysData.length === 0) {
@@ -401,8 +393,7 @@ class Calendar {
                 item.addEventListener('click', () => {
                     input.value = groupName;
                     this.selectedGroup = groupName;
-                    dropdown.style.display = 'none'
-
+                    dropdown.style.display = 'none';
                     this.generate();
                 });
 
@@ -428,20 +419,24 @@ document.addEventListener('DOMContentLoaded', function () {
     calendar.generate();
     calendar.initCustomDropdown();
 
-    let prevButton = document.getElementById("prev")
-    let postButton = document.getElementById("post")
+    let prevButton = document.getElementById("prev");
+    let postButton = document.getElementById("post");
 
-    prevButton.addEventListener("click", () => {
-        let year = calendar.date.getFullYear()
-        let month = calendar.date.getMonth()
-        calendar.date = new Date(year, month + 1, 1);
-        calendar.generate();
-    });
+    if (prevButton) {
+        prevButton.addEventListener("click", () => {
+            let year = calendar.date.getFullYear();
+            let month = calendar.date.getMonth();
+            calendar.date = new Date(year, month - 1, 1);
+            calendar.generate();
+        });
+    }
 
-    postButton.addEventListener("click", () => {
-        let year = calendar.date.getFullYear();
-        let month = calendar.date.getMonth();
-        calendar.date = new Date(year, month - 1, 1);
-        calendar.generate();
-    });
+    if (postButton) {
+        postButton.addEventListener("click", () => {
+            let year = calendar.date.getFullYear();
+            let month = calendar.date.getMonth();
+            calendar.date = new Date(year, month + 1, 1);
+            calendar.generate();
+        });
+    }
 });
