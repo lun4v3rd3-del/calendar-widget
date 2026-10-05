@@ -158,9 +158,12 @@ func (s *SheetService) parseGroups(ctx context.Context) (map[string]entity.Group
 		}
 
 		var actualRowIndex = 0
+		var lastTime string
 
 		for _, row := range rows {
-			print(row)
+			if lastTime == row[0].FormattedValue || row[0].FormattedValue == "" {
+				continue
+			}
 
 			dayNum := actualRowIndex / 7
 			timeIndex := actualRowIndex % 7
@@ -189,6 +192,7 @@ func (s *SheetService) parseGroups(ctx context.Context) (map[string]entity.Group
 				)
 			}
 
+			lastTime = row[0].FormattedValue
 			actualRowIndex++
 		}
 
