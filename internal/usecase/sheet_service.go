@@ -105,7 +105,7 @@ func (s *SheetService) getCellDataGrid(ctx context.Context) ([][]*sheets.CellDat
 		Fields("sheets(data(rowData(values(formattedValue,textFormatRuns(format(link(uri)))))))").
 		Context(ctx).
 		Do()
-	
+
 	if err != nil {
 		return nil, nil, fmt.Errorf("не удалось получить данные ячеек: %w", err)
 	}
@@ -252,28 +252,49 @@ func (s *SheetService) fillMergedCellData(merges []*sheets.GridRange, grid [][]*
 	}
 }
 
-func extractLinks(cell *sheets.CellData) []string {
+func extractLinks(cell *sheets.CellData) []entity.LinkInfo {
 	if cell == nil {
 		return nil
 	}
 
-	var links []string
+	var links []entity.LinkInfo
 	seen := make(map[string]bool)
 
+	runes := []rune(cell.FormattedValue)
+	textLen := len(runes)
+
 	if len(cell.TextFormatRuns) > 0 {
-		for _, run := range cell.TextFormatRuns {
+		for i, run := range cell.TextFormatRuns {
 			if run.Format != nil && run.Format.Link != nil && run.Format.Link.Uri != "" {
 				url := run.Format.Link.Uri
 				if !seen[url] {
 					seen[url] = true
-					links = append(links, url)
+
+					start := int(run.StartIndex)
+					var end int
+
+					if i+1 < len(cell.TextFormatRuns) {
+						end = int(cell.TextFormatRuns[i+1].StartIndex)
+					} else {
+						end = textLen
+					}
+
+					links = append(links, entity.LinkInfo{
+						URI:   url,
+						Start: start,
+						End:   end,
+					})
 				}
 			}
 		}
 	}
 
 	if len(links) == 0 && cell.Hyperlink != "" {
-		links = append(links, cell.Hyperlink)
+		links = append(links, entity.LinkInfo{
+			URI:   cell.Hyperlink,
+			Start: 0,
+			End:   textLen,
+		})
 	}
 
 	return links

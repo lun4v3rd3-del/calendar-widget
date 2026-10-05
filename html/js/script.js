@@ -70,11 +70,11 @@ class Calendar {
         let weekDiv = createWeekRow();
         const totalDays = new Date(year, month + 1, 0).getDate();
 
-        // Заполнение пустых дней прошлого месяца
         for (let i = startDayOfWeek; i > 0; i--) {
             const emptyDiv = document.createElement('div');
             emptyDiv.classList.add('day', 'empty');
-            let prevDate = new Date(firstDayOfMonth.getTime() - i * 24 * 60 * 60 * 1000);
+
+            let prevDate = new Date(year, month, 1 - i);
             emptyDiv.textContent = prevDate.getDate().toString();
 
             emptyDiv.addEventListener("click", () => {
@@ -116,27 +116,24 @@ class Calendar {
             }
         }
 
-        // Заполнение пустых дней следующего месяца (интерактивные)
-        for (let i = 1; weekDiv.childElementCount <= 7 && weekDiv.childElementCount !== 1; i++) {
-            const emptyDiv = document.createElement('div');
-            emptyDiv.classList.add('day', 'empty');
-            emptyDiv.textContent = i.toString();
+        let nextMonthDay = 1;
 
-            emptyDiv.addEventListener("click", () => {
-                this.date = new Date(year, month + 1, i);
-                this.generate();
-            });
-
-            this.a.push(emptyDiv);
-            weekDiv.appendChild(emptyDiv);
-        }
-
-        // Дозаполнение строки до полной недели, если необходимо
         if (weekDiv.childElementCount > 1) {
             while (weekDiv.childElementCount < 8) {
                 const emptyDiv = document.createElement('div');
                 emptyDiv.classList.add('day', 'empty');
+
+                const dayValue = nextMonthDay;
+                emptyDiv.textContent = dayValue.toString();
+
+                emptyDiv.addEventListener("click", () => {
+                    this.date = new Date(year, month + 1, dayValue);
+                    this.generate();
+                });
+
+                this.a.push(emptyDiv);
                 weekDiv.appendChild(emptyDiv);
+                nextMonthDay++;
             }
             this.calendarDays.appendChild(weekDiv);
         }
@@ -149,6 +146,7 @@ class Calendar {
             }
         }
     }
+
 
     changeSelected(div) {
         if (div.classList.contains("calendar-week")) {
