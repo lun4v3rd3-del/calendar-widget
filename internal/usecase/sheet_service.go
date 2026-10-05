@@ -102,7 +102,7 @@ func (s *SheetService) getCellDataGrid(ctx context.Context) ([][]*sheets.CellDat
 		Spreadsheets.
 		Get(s.spreadsheetID).
 		Ranges(readRange).
-		Fields("sheets(data(rowData(values(formattedValue,textFormatRuns(format(link(uri)))))))").
+		Fields("sheets(data(rowData(values(formattedValue,textFormatRuns(startIndex,format(link(uri)))))))").
 		Context(ctx).
 		Do()
 
