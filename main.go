@@ -68,6 +68,11 @@ func main() {
 	mustLoadEnv()
 	sheetSrv, _ := usecase.NewSheetService(context.Background(), os.Getenv("GSHEET_SPREADSHEET_ID"), os.Getenv("GSHEET_API_KEY"))
 
+	sheet, _ := sheetSrv.GetSheet(context.Background())
+	sheetRaw, _ := json.MarshalIndent(sheet, "", "\t")
+
+	println(string(sheetRaw))
+
 	publicFS, err := fs.Sub(htmlFiles, "html")
 	if err != nil {
 		log.Fatal("Ошибка создания подсистемы файлов embed:", err)

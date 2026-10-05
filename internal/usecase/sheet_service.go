@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 
 	"awesomeProject10/internal/entity"
@@ -40,11 +41,13 @@ type SheetService struct {
 }
 
 func NewSheetService(ctx context.Context, spreadsheetID, gsheetAPIKey string) (*SheetService, error) {
+	log.Printf("[INIT] Инициализация SheetService для SpreadsheetID: %s", spreadsheetID)
 	srv, err := sheets.NewService(
 		ctx,
 		option.WithAPIKey(gsheetAPIKey),
 	)
 	if err != nil {
+		log.Printf("[INIT_ERROR] Ошибка создания sheets.Service: %v", err)
 		return nil, fmt.Errorf("unable to retrieve Sheets client: %w", err)
 	}
 
@@ -58,11 +61,14 @@ func NewSheetService(ctx context.Context, spreadsheetID, gsheetAPIKey string) (*
 }
 
 func (s *SheetService) GetSheet(ctx context.Context) (*entity.Sheet, error) {
+	log.Println("[GET_SHEET] Старт вызова GetSheet")
 	groups, err := s.parseGroups(ctx)
 	if err != nil {
+		log.Printf("[GET_SHEET_ERROR] Ошибка в parseGroups: %v", err)
 		return nil, err
 	}
 
+	log.Printf("[GET_SHEET_SUCCESS] parseGroups успешно завершен, найдено групп: %d", len(groups))
 	return &entity.Sheet{
 		Groups: groups,
 	}, nil
@@ -96,10 +102,10 @@ func (s *SheetService) getCellDataGrid(ctx context.Context) ([][]*sheets.CellDat
 		Spreadsheets.
 		Get(s.spreadsheetID).
 		Ranges(readRange).
-		Fields("sheets(data(rowData(values(formattedValue,textFormatRuns(format(hyperlink))))))").
+		Fields("sheets(data(rowData(values(formattedValue,textFormatRuns(format(link(uri)))))))").
 		Context(ctx).
 		Do()
-
+	
 	if err != nil {
 		return nil, nil, fmt.Errorf("не удалось получить данные ячеек: %w", err)
 	}
@@ -154,9 +160,7 @@ func (s *SheetService) parseGroups(ctx context.Context) (map[string]entity.Group
 		var actualRowIndex = 0
 
 		for _, row := range rows {
-			if len(row) == 0 || row[0] == nil || strings.TrimSpace(row[0].FormattedValue) == "" {
-				continue
-			}
+			print(row)
 
 			dayNum := actualRowIndex / 7
 			timeIndex := actualRowIndex % 7
