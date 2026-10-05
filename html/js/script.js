@@ -421,6 +421,7 @@ class Calendar {
                 item.addEventListener('click', () => {
                     input.value = groupName;
                     this.selectedGroup = groupName;
+                    localStorage.setItem("group", groupName)
                     dropdown.style.display = 'none';
                     this.generate();
                 });
@@ -444,6 +445,7 @@ class Calendar {
 
 document.addEventListener('DOMContentLoaded', function () {
     let calendar = new Calendar();
+    calendar.selectedGroup = localStorage.getItem("group")
     calendar.generate();
     calendar.initCustomDropdown();
 
