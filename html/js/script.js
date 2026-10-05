@@ -445,7 +445,11 @@ class Calendar {
 
 document.addEventListener('DOMContentLoaded', function () {
     let calendar = new Calendar();
-    calendar.selectedGroup = localStorage.getItem("group")
+    let input = document.getElementById("group-input")
+    let groupName = localStorage.getItem("group")
+    calendar.selectedGroup = groupName
+    input.textContent = groupName
+
     calendar.generate();
     calendar.initCustomDropdown();
 
