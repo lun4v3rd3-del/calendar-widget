@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>HTML Календарь и Расписание</title>
+    <link rel="stylesheet" href="/html/css/style.css">
+</head>
+<body>
+<div class="main-container">
+    <div>
+        <div class="group-selector">
+            <label for="group-input" class="group-label">Группа:</label>
+            <div class="autocomplete-wrapper">
+                <input type="text" id="group-input" placeholder="ВЫБЕРИТЕ ИЛИ ВВЕДИТЕ" autocomplete="off">
+                <div id="custom-drop-down" class="custom-dropdown" style="display: none;"></div>
+            </div>
+        </div>
+
+
+        <div class="calendar">
+            <div class="calendar-header">
+                <button id="post"><</button>
+                <div id="month-year"></div>
+                <button id="prev">></button>
+            </div>
+
+            <div class="calendar-grid-header">
+                <div>W</div>
+                <div class="day-name">Пн</div>
+                <div class="day-name">Вт</div>
+                <div class="day-name">Ср</div>
+                <div class="day-name">Чт</div>
+                <div class="day-name">Пт</div>
+                <div class="day-name">Сб</div>
+                <div class="day-name">Вс</div>
+            </div>
+
+            <div id="calendar-days" class="calendar-days-container"></div>
+        </div>
+    </div>
+
+    <div id="schedule-handler">
+        <div class="schedule-title">schedule title</div>
+        <div class="schedule-content"></div>
+    </div>
+
+</div>
+
+
+<script src="/html/js/script.js"></script>
+</body>
+</html>
