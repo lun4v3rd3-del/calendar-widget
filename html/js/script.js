@@ -200,6 +200,7 @@ class Calendar {
             contentHandler.textContent = "ЗАНЯТИЙ НЕТ";
         }
     }
+
     formatLesson(lesson) {
         const lessonDiv = document.createElement('div');
         lessonDiv.className = 'lesson-item';
@@ -215,49 +216,48 @@ class Calendar {
 
         const injectLinksIntoText = (text, links) => {
             if (!text || text === "Название не указано") return text;
-
             if (!links || links.length === 0) return text;
 
-            links.forEach(link => {
-                if (!link) return;
-                const escapedLink = link.toString();
+            const chars = Array.from(text);
 
-                if (text.includes(escapedLink)) {
-                    const anchor = `<a href="${escapedLink}" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">${escapedLink}</a>`;
-                    text = text.split(escapedLink).join(anchor);
+            const sortedLinks = [...links].sort((a, b) => b.start - a.start);
+
+            sortedLinks.forEach(link => {
+                if (!link || !link.uri) return;
+
+                const start = link.start;
+                const end = link.end;
+
+                if (start >= 0 && end <= chars.length && start < end) {
+                    const anchorText = chars.slice(start, end).join('');
+
+                    const htmlLink = `<a href="${link.uri}" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">${anchorText}</a>`;
+
+                    chars.splice(start, end - start, htmlLink);
                 }
             });
 
-            links.forEach((link, index) => {
-                if (!link) return;
-                const escapedLink = link.toString();
-                if (!text.includes(escapedLink)) {
-                    const label = links.length > 1 ? `Ссылка ${index + 1}` : 'Ссылка';
-                    text += ` (<a href="${escapedLink}" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">${label}</a>)`;
-                }
-            });
-
-            return text;
+            return chars.join('');
         };
 
         lessonDiv.innerHTML = `
-            <div class="lesson-header" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                <div style="font-size: 11px; color: #777; margin-bottom: 4px;">[ ВРЕМЯ: ${lesson.time || '—'} ]</div>
-                <span style="display: flex; gap: 8px;">
-                    <div class="drop-trigger" style="color: dimgray; text-decoration: underline; cursor: pointer; display: ${isMasked ? 'inline-block' : 'none'};">сбросить</div>
-                    <div class="edit-trigger" style="color: blue; text-decoration: underline; cursor: pointer;">изменить</div>  
-                </span>
+        <div class="lesson-header" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <div style="font-size: 11px; color: #777; margin-bottom: 4px;">[ ВРЕМЯ: ${lesson.time || '—'} ]</div>
+            <span style="display: flex; gap: 8px;">
+                <div class="drop-trigger" style="color: dimgray; text-decoration: underline; cursor: pointer; display: ${isMasked ? 'inline-block' : 'none'};">сбросить</div>
+                <div class="edit-trigger" style="color: blue; text-decoration: underline; cursor: pointer;">изменить</div>  
+            </span>
+        </div>
+        <div class="lesson-name" style="font-style: italic; line-height: 1.3;"></div>
+       
+        <div class="edit-form" style="display: none; margin-top: 10px; flex-direction: column; gap: 8px;">
+            <textarea class="edit-input" style="width: 100%; box-sizing: border-box;"></textarea>
+            <div style="display: flex; gap: 8px;">
+                <button class="save-btn" style="cursor: pointer;">Сохранить</button>
+                <button class="cancel-btn" style="cursor: pointer;">Отмена</button>
             </div>
-            <div class="lesson-name" style="font-style: italic; line-height: 1.3;"></div>
-           
-            <div class="edit-form" style="display: none; margin-top: 10px; flex-direction: column; gap: 8px;">
-                <textarea class="edit-input" style="width: 100%; box-sizing: border-box;"></textarea>
-                <div style="display: flex; gap: 8px;">
-                    <button class="save-btn" style="cursor: pointer;">Сохранить</button>
-                    <button class="cancel-btn" style="cursor: pointer;">Отмена</button>
-                </div>
-            </div>
-        `;
+        </div>
+    `;
 
         const lessonNameDiv = lessonDiv.querySelector('.lesson-name');
 
@@ -282,7 +282,6 @@ class Calendar {
         editTrigger.addEventListener('click', () => {
             editForm.style.display = 'flex';
             editTrigger.style.display = 'none';
-            // В поле редактирования выводим чистый текст без HTML тегов ссылок
             editInput.value = lessonNameDiv.textContent === "Название не указано" ? "" : lessonNameDiv.textContent;
         });
 
@@ -311,6 +310,7 @@ class Calendar {
 
         return lessonDiv;
     }
+
 
 
     _getMasks() {
