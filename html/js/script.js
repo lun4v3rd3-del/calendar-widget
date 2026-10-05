@@ -215,15 +215,42 @@ class Calendar {
             isMasked = false;
         }
 
-        const hasLinks = lesson.links && lesson.links.length > 0;
-        const linksHtml = hasLinks
-            ? lesson.links.map((link, index) => `
-                <a href="${link}" target="_blank" rel="noopener noreferrer" 
-                   style="color: #0066cc; text-decoration: underline; font-size: 12px; margin-right: 10px; word-break: break-all;">
-                   Ссылка ${lesson.links.length > 1 ? index + 1 : ''}
-                </a>
-              `).join('')
-            : '';
+        const escapeHtml = (text) => {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        };
+
+        const injectLinksIntoText = (text, links) => {
+            if (!text || text === "Название не указано") return text;
+
+            let safeText = escapeHtml(text);
+            if (!links || links.length === 0) return safeText;
+
+            links.forEach(link => {
+                if (!link) return;
+                const escapedLink = escapeHtml(link);
+
+                if (safeText.includes(escapedLink)) {
+                    const anchor = `<a href="${escapedLink}" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">${escapedLink}</a>`;
+                    safeText = safeText.split(escapedLink).join(anchor);
+                }
+            });
+
+            links.forEach((link, index) => {
+                if (!link) return;
+                const escapedLink = escapeHtml(link);
+                if (!safeText.includes(escapedLink)) {
+                    const label = links.length > 1 ? `Ссылка ${index + 1}` : 'Ссылка';
+                    safeText += ` (<a href="${escapedLink}" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">${label}</a>)`;
+                }
+            });
+
+            return safeText;
+        };
 
         lessonDiv.innerHTML = `
             <div class="lesson-header" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
@@ -233,12 +260,7 @@ class Calendar {
                     <div class="edit-trigger" style="color: blue; text-decoration: underline; cursor: pointer;">изменить</div>  
                 </span>
             </div>
-            <div class="lesson-name" style="font-style: italic; line-height: 1.3; margin-bottom: 6px;"></div>
-           
-            <div class="lesson-links" style="display: ${hasLinks ? 'block' : 'none'}; margin-bottom: 4px;">
-                <span style="font-size: 11px; color: #777; margin-right: 6px;">[ ССЫЛКИ: ]</span>
-                ${linksHtml}
-            </div>
+            <div class="lesson-name" style="font-style: italic; line-height: 1.3;"></div>
            
             <div class="edit-form" style="display: none; margin-top: 10px; flex-direction: column; gap: 8px;">
                 <textarea class="edit-input" style="width: 100%; box-sizing: border-box;"></textarea>
@@ -250,7 +272,8 @@ class Calendar {
         `;
 
         const lessonNameDiv = lessonDiv.querySelector('.lesson-name');
-        lessonNameDiv.textContent = lessonName;
+
+        lessonNameDiv.innerHTML = injectLinksIntoText(lessonName, lesson.links);
 
         const editTrigger = lessonDiv.querySelector('.edit-trigger');
         const dropTrigger = lessonDiv.querySelector('.drop-trigger');
@@ -271,6 +294,7 @@ class Calendar {
         editTrigger.addEventListener('click', () => {
             editForm.style.display = 'flex';
             editTrigger.style.display = 'none';
+            // В поле редактирования выводим чистый текст без HTML тегов ссылок
             editInput.value = lessonNameDiv.textContent === "Название не указано" ? "" : lessonNameDiv.textContent;
         });
 
@@ -290,7 +314,7 @@ class Calendar {
 
             this.maskLesson(rawData, newData);
 
-            lessonNameDiv.textContent = newData || 'Название не указано';
+            lessonNameDiv.innerHTML = injectLinksIntoText(newData || 'Название не указано', lesson.links);
             editForm.style.display = 'none';
             editTrigger.style.display = 'block';
 
@@ -299,6 +323,7 @@ class Calendar {
 
         return lessonDiv;
     }
+
 
     _getMasks() {
         const masksData = localStorage.getItem('schedule_masks');
