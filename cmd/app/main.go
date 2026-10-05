@@ -62,7 +62,19 @@ func main() {
 	mustLoadEnv()
 	sheetSrv := usecase.NewSheetService(os.Getenv("GSHEET_SPREADSHEET_ID"), os.Getenv("GSHEET_API_KEY"))
 
-	http.HandleFunc("/", handleConnections(sheetSrv))
+	http.HandleFunc("/ws", handleConnections(sheetSrv))
+
+	fs := http.FileServer(http.Dir("./html"))
+	http.Handle("/css/", fs)
+	http.Handle("/js/", fs)
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			http.ServeFile(w, r, "./html/index.html")
+			return
+		}
+		http.NotFound(w, r)
+	})
 
 	port := os.Getenv("PORT")
 	if port == "" {
