@@ -142,7 +142,7 @@ class Calendar {
             if (this.selectedElement.classList.contains("day")) {
                 this.pullShedule(this.selectedElement);
             } else if (this.selectedElement.classList.contains("calendar-week")) {
-                this.pullWeekShedule(this.selectedElement);
+                this.pullWeekShedule();
             }
         }
     }
@@ -150,7 +150,7 @@ class Calendar {
 
     changeSelected(div) {
         if (div.classList.contains("calendar-week")) {
-            this.pullWeekShedule(div);
+            this.pullWeekShedule();
         } else if (div.classList.contains("day")) {
             if (div.classList.contains("empty")) return;
             this.pullShedule(div);
@@ -213,41 +213,31 @@ class Calendar {
             isMasked = false;
         }
 
-        const escapeHtml = (text) => {
-            return text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        };
-
         const injectLinksIntoText = (text, links) => {
             if (!text || text === "Название не указано") return text;
 
-            let safeText = escapeHtml(text);
-            if (!links || links.length === 0) return safeText;
+            if (!links || links.length === 0) return text;
 
             links.forEach(link => {
                 if (!link) return;
-                const escapedLink = escapeHtml(link);
+                const escapedLink = link.toString();
 
-                if (safeText.includes(escapedLink)) {
+                if (text.includes(escapedLink)) {
                     const anchor = `<a href="${escapedLink}" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">${escapedLink}</a>`;
-                    safeText = safeText.split(escapedLink).join(anchor);
+                    text = text.split(escapedLink).join(anchor);
                 }
             });
 
             links.forEach((link, index) => {
                 if (!link) return;
-                const escapedLink = escapeHtml(link);
-                if (!safeText.includes(escapedLink)) {
+                const escapedLink = link.toString();
+                if (!text.includes(escapedLink)) {
                     const label = links.length > 1 ? `Ссылка ${index + 1}` : 'Ссылка';
-                    safeText += ` (<a href="${escapedLink}" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">${label}</a>)`;
+                    text += ` (<a href="${escapedLink}" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">${label}</a>)`;
                 }
             });
 
-            return safeText;
+            return text;
         };
 
         lessonDiv.innerHTML = `
@@ -285,7 +275,7 @@ class Calendar {
             if (this.selectedElement.classList.contains("day")) {
                 this.pullShedule(this.selectedElement);
             } else if (this.selectedElement.classList.contains("calendar-week")) {
-                this.pullWeekShedule(this.selectedElement);
+                this.pullWeekShedule();
             }
         };
 
@@ -345,7 +335,7 @@ class Calendar {
         localStorage.setItem('schedule_masks', JSON.stringify(masksMap));
     }
 
-    pullWeekShedule(weekDiv) {
+    pullWeekShedule() {
         const titleHandler = document.getElementsByClassName("schedule-title")[0];
         const contentHandler = document.getElementsByClassName("schedule-content")[0];
 
