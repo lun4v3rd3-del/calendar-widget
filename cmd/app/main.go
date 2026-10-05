@@ -64,13 +64,18 @@ func main() {
 
 	http.HandleFunc("/ws", handleConnections(sheetSrv))
 
-	fs := http.FileServer(http.Dir("./html"))
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatal("Не удалось получить рабочую директорию:", err)
+	}
+
+	fs := http.FileServer(http.Dir(wd + "/html"))
 	http.Handle("/css/", fs)
 	http.Handle("/js/", fs)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" {
-			http.ServeFile(w, r, "./html/index.html")
+		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
+			http.ServeFile(w, r, wd+"/html/index.html")
 			return
 		}
 		http.NotFound(w, r)
@@ -81,8 +86,7 @@ func main() {
 		port = "8080"
 	}
 
-	err := http.ListenAndServe(":"+port, nil)
-
+	err = http.ListenAndServe(":"+port, nil)
 	if err != nil {
 		log.Fatal("Не удалось запустить сервер: ", err)
 	}
