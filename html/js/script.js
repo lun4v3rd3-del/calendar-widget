@@ -448,7 +448,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let input = document.getElementById("group-input")
     let groupName = localStorage.getItem("group")
     calendar.selectedGroup = groupName
-    input.textContent = groupName
+    input.value = groupName
 
     calendar.generate();
     calendar.initCustomDropdown();
