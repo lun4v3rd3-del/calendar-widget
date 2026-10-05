@@ -68,7 +68,7 @@ func (s *SheetService) GetSheet(ctx context.Context) (*entity.Sheet, error) {
 	}, nil
 }
 
-func (s *SheetService) getValueRange(ctx context.Context) (*sheets.ValueRange, error) {
+func (s *SheetService) getCellDataGrid(ctx context.Context) ([][]*sheets.CellData, []*sheets.GridRange, error) {
 	spreadsheet, err := s.gSheetSrv.
 		Spreadsheets.
 		Get(s.spreadsheetID).
@@ -77,11 +77,11 @@ func (s *SheetService) getValueRange(ctx context.Context) (*sheets.ValueRange, e
 		Do()
 
 	if err != nil {
-		return nil, fmt.Errorf("не удалось получить структуру таблицы: %w", err)
+		return nil, nil, fmt.Errorf("не удалось получить структуру таблицы: %w", err)
 	}
 
 	if spreadsheet == nil || len(spreadsheet.Sheets) == 0 {
-		return nil, fmt.Errorf("в таблице отсутствуют листы")
+		return nil, nil, fmt.Errorf("в таблице отсутствуют листы")
 	}
 
 	firstSheet := spreadsheet.Sheets[0]
@@ -92,47 +92,53 @@ func (s *SheetService) getValueRange(ctx context.Context) (*sheets.ValueRange, e
 		strings.ReplaceAll(sheetTitle, "'", "''"),
 	)
 
-	valueRange, err := s.gSheetSrv.
+	dataSpreadsheet, err := s.gSheetSrv.
 		Spreadsheets.
-		Values.
-		Get(s.spreadsheetID, readRange).
+		Get(s.spreadsheetID).
+		Ranges(readRange).
+		Fields("sheets(data(rowData(values(formattedValue,textFormatRuns(format(hyperlink))))))").
 		Context(ctx).
 		Do()
 
 	if err != nil {
-		return nil, fmt.Errorf("не удалось получить данные: %w", err)
+		return nil, nil, fmt.Errorf("не удалось получить данные ячеек: %w", err)
 	}
 
-	if valueRange == nil || len(valueRange.Values) == 0 {
-		return nil, fmt.Errorf("получен пустой массив данных")
+	if len(dataSpreadsheet.Sheets) == 0 || len(dataSpreadsheet.Sheets[0].Data) == 0 {
+		return nil, nil, fmt.Errorf("получен пустой массив данных")
 	}
 
-	s.fillMergedCells(firstSheet.Merges, valueRange)
+	rowData := dataSpreadsheet.Sheets[0].Data[0].RowData
+	grid := make([][]*sheets.CellData, len(rowData))
+	for i, r := range rowData {
+		grid[i] = r.Values
+	}
 
-	return valueRange, nil
+	return grid, firstSheet.Merges, nil
 }
 
 func (s *SheetService) parseGroups(ctx context.Context) (map[string]entity.Group, error) {
-	valueRange, err := s.getValueRange(ctx)
+	grid, merges, err := s.getCellDataGrid(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	groups := make(map[string]entity.Group)
-	if len(valueRange.Values) == 0 {
-		return groups, nil
+	if len(grid) == 0 {
+		return make(map[string]entity.Group), nil
 	}
 
-	headerRow := valueRange.Values[0]
-	rows := valueRange.Values[1:]
+	s.fillMergedCellData(merges, grid)
 
-	for colIndex, groupObj := range headerRow[1:] {
-		groupName, ok := groupObj.(string)
-		if !ok {
+	groups := make(map[string]entity.Group)
+	headerRow := grid[0]
+	rows := grid[1:]
+
+	for colIndex, groupCell := range headerRow[1:] {
+		if groupCell == nil {
 			continue
 		}
 
-		groupName = strings.TrimSpace(groupName)
+		groupName := strings.TrimSpace(groupCell.FormattedValue)
 		if groupName == "" {
 			continue
 		}
@@ -141,43 +147,45 @@ func (s *SheetService) parseGroups(ctx context.Context) (map[string]entity.Group
 		for i, dayName := range WeekDays {
 			days[i] = entity.Day{
 				Name:    dayName,
-				Lessons: make([]entity.Lesson, 0, len(LessonTimes)),
+				Lessons: make([]entity.Lesson, 0, 7),
 			}
 		}
 
-		var c = 0
-		for rowIndex, row := range rows {
-			println(row[0].(string))
-			if row[0] == "" {
-				c++
+		var actualRowIndex = 0
+
+		for _, row := range rows {
+			if len(row) == 0 || row[0] == nil || strings.TrimSpace(row[0].FormattedValue) == "" {
 				continue
 			}
 
-			rowIndex -= c
+			dayNum := actualRowIndex / 7
+			timeIndex := actualRowIndex % 7
 
-			dayNum := rowIndex / len(LessonTimes)
 			if dayNum >= len(WeekDays) {
 				break
 			}
 
-			if colIndex >= len(row) {
+			realColIndex := colIndex + 1
+			if realColIndex >= len(row) || row[realColIndex] == nil {
+				actualRowIndex++
 				continue
 			}
 
-			cellVal := strings.TrimSpace(getStringValue(row[colIndex]))
-			if cellVal == "" {
-				continue
+			cell := row[realColIndex]
+			cellVal := strings.TrimSpace(cell.FormattedValue)
+
+			if cellVal != "" {
+				days[dayNum].Lessons = append(
+					days[dayNum].Lessons,
+					entity.Lesson{
+						Name:  cellVal,
+						Time:  LessonTimes[timeIndex],
+						Links: extractLinks(cell),
+					},
+				)
 			}
 
-			timeIndex := rowIndex % len(LessonTimes)
-
-			days[dayNum].Lessons = append(
-				days[dayNum].Lessons,
-				entity.Lesson{
-					Name: cellVal,
-					Time: LessonTimes[timeIndex],
-				},
-			)
+			actualRowIndex++
 		}
 
 		groups[groupName] = entity.Group{Days: days}
@@ -186,8 +194,8 @@ func (s *SheetService) parseGroups(ctx context.Context) (map[string]entity.Group
 	return groups, nil
 }
 
-func (s *SheetService) fillMergedCells(merges []*sheets.GridRange, valueRange *sheets.ValueRange) {
-	if len(merges) == 0 || valueRange == nil {
+func (s *SheetService) fillMergedCellData(merges []*sheets.GridRange, grid [][]*sheets.CellData) {
+	if len(merges) == 0 || len(grid) == 0 {
 		return
 	}
 
@@ -199,21 +207,21 @@ func (s *SheetService) fillMergedCells(merges []*sheets.GridRange, valueRange *s
 		mainRow := int(merge.StartRowIndex) - s.startRow
 		mainCol := int(merge.StartColumnIndex) - s.startCol
 
-		if mainRow < 0 || mainCol < 0 || mainRow >= len(valueRange.Values) {
+		if mainRow < 0 || mainCol < 0 || mainRow >= len(grid) {
 			continue
 		}
 
-		if mainCol >= len(valueRange.Values[mainRow]) {
+		if mainCol >= len(grid[mainRow]) || grid[mainRow][mainCol] == nil {
 			continue
 		}
 
-		mainValue := valueRange.Values[mainRow][mainCol]
+		mainValue := grid[mainRow][mainCol]
 
 		endRow := int(merge.EndRowIndex) - s.startRow
 		endCol := int(merge.EndColumnIndex) - s.startCol
 
-		if endRow > len(valueRange.Values) {
-			endRow = len(valueRange.Values)
+		if endRow > len(grid) {
+			endRow = len(grid)
 		}
 
 		for localRow := mainRow; localRow < endRow; localRow++ {
@@ -221,10 +229,10 @@ func (s *SheetService) fillMergedCells(merges []*sheets.GridRange, valueRange *s
 				continue
 			}
 
-			if len(valueRange.Values[localRow]) <= endCol {
-				extended := make([]interface{}, endCol)
-				copy(extended, valueRange.Values[localRow])
-				valueRange.Values[localRow] = extended
+			if len(grid[localRow]) <= endCol {
+				extended := make([]*sheets.CellData, endCol)
+				copy(extended, grid[localRow])
+				grid[localRow] = extended
 			}
 
 			for localCol := mainCol; localCol < endCol; localCol++ {
@@ -232,34 +240,37 @@ func (s *SheetService) fillMergedCells(merges []*sheets.GridRange, valueRange *s
 					continue
 				}
 
-				if isEmptyCell(valueRange.Values[localRow][localCol]) {
-					valueRange.Values[localRow][localCol] = mainValue
+				if grid[localRow][localCol] == nil || grid[localRow][localCol].FormattedValue == "" {
+					grid[localRow][localCol] = mainValue
 				}
 			}
 		}
 	}
 }
 
-func getStringValue(value interface{}) string {
-	if value == nil {
-		return ""
+func extractLinks(cell *sheets.CellData) []string {
+	if cell == nil {
+		return nil
 	}
-	switch v := value.(type) {
-	case string:
-		return v
-	case fmt.Stringer:
-		return v.String()
-	default:
-		return fmt.Sprintf("%v", v)
-	}
-}
 
-func isEmptyCell(value interface{}) bool {
-	if value == nil {
-		return true
+	var links []string
+	seen := make(map[string]bool)
+
+	if len(cell.TextFormatRuns) > 0 {
+		for _, run := range cell.TextFormatRuns {
+			if run.Format != nil && run.Format.Link != nil && run.Format.Link.Uri != "" {
+				url := run.Format.Link.Uri
+				if !seen[url] {
+					seen[url] = true
+					links = append(links, url)
+				}
+			}
+		}
 	}
-	if str, ok := value.(string); ok {
-		return strings.TrimSpace(str) == ""
+
+	if len(links) == 0 && cell.Hyperlink != "" {
+		links = append(links, cell.Hyperlink)
 	}
-	return false
+
+	return links
 }

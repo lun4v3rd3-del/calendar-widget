@@ -14,6 +14,7 @@ type Day struct {
 }
 
 type Lesson struct {
-	Time string `json:"time"`
-	Name string `json:"name"`
+	Time  string   `json:"time"`
+	Name  string   `json:"name"`
+	Links []string `json:"links"`
 }

@@ -215,6 +215,16 @@ class Calendar {
             isMasked = false;
         }
 
+        const hasLinks = lesson.links && lesson.links.length > 0;
+        const linksHtml = hasLinks
+            ? lesson.links.map((link, index) => `
+                <a href="${link}" target="_blank" rel="noopener noreferrer" 
+                   style="color: #0066cc; text-decoration: underline; font-size: 12px; margin-right: 10px; word-break: break-all;">
+                   Ссылка ${lesson.links.length > 1 ? index + 1 : ''}
+                </a>
+              `).join('')
+            : '';
+
         lessonDiv.innerHTML = `
             <div class="lesson-header" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                 <div style="font-size: 11px; color: #777; margin-bottom: 4px;">[ ВРЕМЯ: ${lesson.time || '—'} ]</div>
@@ -223,7 +233,12 @@ class Calendar {
                     <div class="edit-trigger" style="color: blue; text-decoration: underline; cursor: pointer;">изменить</div>  
                 </span>
             </div>
-            <div class="lesson-name" style="font-style: italic; line-height: 1.3;"></div>
+            <div class="lesson-name" style="font-style: italic; line-height: 1.3; margin-bottom: 6px;"></div>
+           
+            <div class="lesson-links" style="display: ${hasLinks ? 'block' : 'none'}; margin-bottom: 4px;">
+                <span style="font-size: 11px; color: #777; margin-right: 6px;">[ ССЫЛКИ: ]</span>
+                ${linksHtml}
+            </div>
            
             <div class="edit-form" style="display: none; margin-top: 10px; flex-direction: column; gap: 8px;">
                 <textarea class="edit-input" style="width: 100%; box-sizing: border-box;"></textarea>
