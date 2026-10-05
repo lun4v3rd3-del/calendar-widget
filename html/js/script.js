@@ -231,7 +231,7 @@ class Calendar {
                 if (start >= 0 && end <= chars.length && start < end) {
                     const anchorText = chars.slice(start, end).join('');
 
-                    const htmlLink = `<a href="${link.uri}" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">${anchorText}</a>`;
+                    const htmlLink = `<a href="${link.uri}" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">${anchorText}</a>`
 
                     chars.splice(start, end - start, htmlLink);
                 }
