@@ -60,7 +60,7 @@ func handleConnections(sheetService interfaces.SheetService) func(w http.Respons
 	}
 }
 
-//go:embed html/*
+//go:embed html
 var htmlFiles embed.FS
 
 func main() {
