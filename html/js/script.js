@@ -1,6 +1,6 @@
 class Calendar {
     constructor() {
-        this.socket = new WebSocket("ws://localhost:8080/");
+        this.socket = new WebSocket("ws://https://calendar-widget-jn6l.onrender.com:8080/");
         this.initSocket();
 
         this.calendarDays = document.getElementById('calendar-days');

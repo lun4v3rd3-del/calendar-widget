@@ -77,8 +77,5 @@ func main() {
 }
 
 func mustLoadEnv() {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatal(err)
-	}
+	_ = godotenv.Load(".env")
 }
