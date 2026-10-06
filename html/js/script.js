@@ -442,6 +442,7 @@ class Calendar {
         });
     }
 }
+
 document.addEventListener('DOMContentLoaded', function () {
     let calendar = new Calendar();
     let input = document.getElementById("group-input")
@@ -475,21 +476,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const scheduleHandler = document.getElementById('schedule-handler');
     const closeBtn = document.getElementById('close-schedule');
-    const calendarDaysContainer = document.getElementById('calendar-days');
 
-    if (calendarDaysContainer && scheduleHandler) {
-        calendarDaysContainer.addEventListener('click', (e) => {
-            const isDay = e.target.classList.contains('day') && !e.target.classList.contains('empty');
-            const isWeekBtn = e.target.classList.contains('week-select-btn');
+    window.addEventListener('click', (e) => {
+        const dayElement = e.target.closest('.day');
+        const weekBtnElement = e.target.closest('.week-select-btn');
 
-            if (isDay || isWeekBtn) {
-                if (window.innerWidth <= 850) {
-                    scheduleHandler.classList.add('active');
-                    document.body.style.overflow = 'hidden';
-                }
+        const isDay = dayElement && !dayElement.classList.contains('empty');
+        const isWeekBtn = !!weekBtnElement;
+
+        if (isDay || isWeekBtn) {
+            if (window.innerWidth <= 850 && scheduleHandler) {
+                scheduleHandler.classList.add('active');
+                document.body.style.overflow = 'hidden';
             }
-        });
-    }
+        }
+    }, true);
 
     if (closeBtn && scheduleHandler) {
         closeBtn.addEventListener('click', () => {
