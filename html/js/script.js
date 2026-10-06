@@ -202,21 +202,47 @@ class Calendar {
         if (dayData.lessons && dayData.lessons.length > 0) {
             const container = document.createElement("div");
             container.classList.add("weekly-day-card");
-            dayData.lessons.forEach(lesson => {
-                container.appendChild(this.formatLesson(lesson, dayData.id));
+
+            // 1. Разделяем массив на первый урок и все остальные
+            const [firstLesson, ...otherLessons] = dayData.lessons;
+
+            // 2. Обрабатываем самый первый элемент отдельно
+            if (firstLesson) {
+                container.appendChild(this.formatLesson(firstLesson, dayData.id, "00.00"));
+            }
+
+            // 3. Последовательно обрабатываем остальные элементы
+            otherLessons.forEach((lesson, index) => {
+                // Определяем предыдущий урок, чтобы взять время его окончания
+                const prevLesson = index === 0 ? firstLesson : otherLessons[index - 1];
+                let end = "00.00";
+
+                if (prevLesson && prevLesson.time) {
+                    const timeParts = prevLesson.time.split(':');
+                    if (timeParts.length > 1) {
+                        end = timeParts[1]; // Достаем "hh.mm" конца предыдущего урока
+                    }
+                }
+
+                container.appendChild(this.formatLesson(lesson, dayData.id, end));
             });
+
             contentHandler.appendChild(container);
         } else {
             contentHandler.textContent = "ЗАНЯТИЙ НЕТ";
         }
     }
 
-    formatLesson(lesson, id) {
-        let now = new Date()
+    formatLesson(lesson, id, prevTime) {
+        let now = new Date();
 
-        let hours = now.getHours()
-        let minutes = now.getMinutes()
-        let day = now.getDay()
+        let hours = now.getHours();
+        let minutes = now.getMinutes();
+
+        // В JS Date.getDay() возвращает: 0 - ВС, 1 - ПН, 2 - ВТ и т.д.
+        // Переводим в ваш формат (0 - ПН, ..., 5 - СБ)
+        let day = now.getDay();
+        day = day === 0 ? 6 : day - 1;
 
         const lessonDiv = document.createElement('div');
         lessonDiv.className = 'lesson-item';
@@ -235,7 +261,6 @@ class Calendar {
             if (!links || links.length === 0) return text;
 
             const chars = Array.from(text);
-
             const sortedLinks = [...links].sort((a, b) => b.start - a.start);
 
             sortedLinks.forEach(link => {
@@ -246,9 +271,7 @@ class Calendar {
 
                 if (start >= 0 && end <= chars.length && start < end) {
                     const anchorText = chars.slice(start, end).join('');
-
-                    const htmlLink = `<a href="${link.uri}" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">${anchorText}</a>`
-
+                    const htmlLink = `<a href="${link.uri}" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">${anchorText}</a>`;
                     chars.splice(start, end - start, htmlLink);
                 }
             });
@@ -256,23 +279,22 @@ class Calendar {
             return chars.join('');
         };
 
-
-        const [startPart, endPart] = str.split(':');
-
-        const [startHour, startMin] = startPart.split('.').map(Number);
+        const [startPart, endPart] = lesson.time.split(':');
+        const [prevHour, prevMin] = startPart.split('.').map(Number);
         const [endHour, endMin] = endPart.split('.').map(Number);
 
-        const startInMinutes = startHour * 60 + startMin;
+        const startInMinutes = prevHour * 60 + prevMin;
         const endInMinutes = endHour * 60 + endMin;
 
-        let isNow = (hours * 60 + minutes > startInMinutes && (hours * 60 + minutes) < endInMinutes && day === id)
+        // Корректно проверяем, идет ли пара прямо сейчас
+        let isNow = (hours * 60 + minutes >= startInMinutes && (hours * 60 + minutes) <= endInMinutes && day === id);
 
         lessonDiv.innerHTML = `
-        <div class="lesson-header" style="${isNow ? "background-color: red;": ""} display: flex; justify-content: space-between; margin-bottom: 10px;">
-            <div style="font-size: 11px; color: #777; margin-bottom: 4px;">[ ВРЕМЯ: ${lesson.time || '—'} ]</div>
+        <div class="lesson-header" style="${isNow ? "background-color: red; color: white;" : ""} display: flex; justify-content: space-between; margin-bottom: 10px; padding: 4px;">
+            <div style="font-size: 11px; color: ${isNow ? '#fff' : '#777'}; margin-bottom: 4px;">[ ВРЕМЯ: ${lesson.time || '—'} ]</div>
             <span style="display: flex; gap: 8px;">
-                <div class="drop-trigger" style="color: dimgray; text-decoration: underline; cursor: pointer; display: ${isMasked ? 'inline-block' : 'none'};">сбросить</div>
-                <div class="edit-trigger" style="color: blue; text-decoration: underline; cursor: pointer;">изменить</div>  
+                <div class="drop-trigger" style="color: ${isNow ? '#fff' : 'dimgray'}; text-decoration: underline; cursor: pointer; display: ${isMasked ? 'inline-block' : 'none'};">сбросить</div>
+                <div class="edit-trigger" style="color: ${isNow ? '#fff' : 'blue'}; text-decoration: underline; cursor: pointer;">изменить</div>  
             </span>
         </div>
         <div class="lesson-name" style="font-style: italic; line-height: 1.3;"></div>
@@ -287,7 +309,6 @@ class Calendar {
     `;
 
         const lessonNameDiv = lessonDiv.querySelector('.lesson-name');
-
         lessonNameDiv.innerHTML = injectLinksIntoText(lessonName, lesson.links);
 
         const editTrigger = lessonDiv.querySelector('.edit-trigger');
@@ -400,8 +421,13 @@ class Calendar {
             lessonsContainer.className = 'weekly-lessons-list';
 
             if (dayData.lessons && dayData.lessons.length > 0) {
-                dayData.lessons.forEach(lesson => {
-                    lessonsContainer.appendChild(this.formatLesson(lesson, dayData.id));
+                let [firstLesson, ...otherLessons] = dayData.lessons;
+                if (firstLesson) {
+                    lessonsContainer.appendChild(this.formatLesson(firstLesson, dayData.id, "00.00"));
+                }
+                otherLessons.forEach(lesson => {
+                    let end = lesson.time.split(':')[1]
+                    lessonsContainer.appendChild(this.formatLesson(lesson, dayData.id, end));
                 });
             } else {
                 const emptyItem = document.createElement('div');
