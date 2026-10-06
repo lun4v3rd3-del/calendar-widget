@@ -442,7 +442,6 @@ class Calendar {
         });
     }
 }
-
 document.addEventListener('DOMContentLoaded', function () {
     let calendar = new Calendar();
     let input = document.getElementById("group-input")
@@ -471,6 +470,31 @@ document.addEventListener('DOMContentLoaded', function () {
             let month = calendar.date.getMonth();
             calendar.date = new Date(year, month + 1, 1);
             calendar.generate();
+        });
+    }
+
+    const scheduleHandler = document.getElementById('schedule-handler');
+    const closeBtn = document.getElementById('close-schedule');
+    const calendarDaysContainer = document.getElementById('calendar-days');
+
+    if (calendarDaysContainer && scheduleHandler) {
+        calendarDaysContainer.addEventListener('click', (e) => {
+            const isDay = e.target.classList.contains('day') && !e.target.classList.contains('empty');
+            const isWeekBtn = e.target.classList.contains('week-select-btn');
+
+            if (isDay || isWeekBtn) {
+                if (window.innerWidth <= 850) {
+                    scheduleHandler.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                }
+            }
+        });
+    }
+
+    if (closeBtn && scheduleHandler) {
+        closeBtn.addEventListener('click', () => {
+            scheduleHandler.classList.remove('active');
+            document.body.style.overflow = '';
         });
     }
 });

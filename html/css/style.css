@@ -311,28 +311,81 @@ body {
 
 @media (max-width: 850px) {
     body {
-        padding: 10px;
+        padding: 12px;
+        overflow-x: hidden;
     }
+
     .main-container {
-        grid-template-columns: 1fr;
-        gap: 16px;
-    }
-    .sidebar-controls {
+        grid-template-columns: 1fr !important;
+        display: block;
         width: 100%;
     }
-    .group-selector, .calendar, #schedule-handler {
-        width: 100%;
-        max-width: 100%;
+
+    .group-selector,
+    .calendar {
+        width: 100% !important;
+        max-width: 100% !important;
         box-sizing: border-box;
     }
+
     .group-selector {
         margin-bottom: 16px;
         border-bottom: 2px solid #000000;
     }
+
+    #schedule-handler {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: #ffffff;
+        z-index: 10000;
+        padding: 20px;
+        box-sizing: border-box;
+        overflow-y: auto;
+        box-shadow: none;
+    }
+
+    #schedule-handler.active {
+        display: block !important;
+    }
+
+    .close-schedule-btn {
+        display: block !important;
+        width: 100%;
+        padding: 12px;
+        background: #000000;
+        color: #ffffff;
+        font-family: "Courier New", Courier, monospace;
+        font-weight: bold;
+        text-transform: uppercase;
+        border: 2px solid #000000;
+        cursor: pointer;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .weekly-schedule-grid {
+        flex-direction: column !important;
+        overflow-x: visible !important;
+        gap: 16px;
+    }
+
     .weekly-day-card {
-        flex: 0 0 280px;
+        flex: none !important;
+        width: 100% !important;
     }
 }
+
+@media (min-width: 851px) {
+    .close-schedule-btn {
+        display: none !important;
+    }
+}
+
+
 
 
 /* asasd */
