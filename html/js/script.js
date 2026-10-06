@@ -1,3 +1,13 @@
+const WeekDays = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday"
+];
+
+
 class Calendar {
     constructor() {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
@@ -187,13 +197,13 @@ class Calendar {
             return;
         }
 
-        titleHandler.textContent = dayData.name.toUpperCase();
+        titleHandler.textContent = WeekDays[dayData.id].toUpperCase();
 
         if (dayData.lessons && dayData.lessons.length > 0) {
             const container = document.createElement("div");
             container.classList.add("weekly-day-card");
             dayData.lessons.forEach(lesson => {
-                container.appendChild(this.formatLesson(lesson));
+                container.appendChild(this.formatLesson(lesson, dayData.id));
             });
             contentHandler.appendChild(container);
         } else {
@@ -201,7 +211,13 @@ class Calendar {
         }
     }
 
-    formatLesson(lesson) {
+    formatLesson(lesson, id) {
+        let now = new Date()
+
+        let hours = now.getHours()
+        let minutes = now.getMinutes()
+        let day = now.getDay()
+
         const lessonDiv = document.createElement('div');
         lessonDiv.className = 'lesson-item';
         lessonDiv.style.marginBottom = '15px';
@@ -240,8 +256,19 @@ class Calendar {
             return chars.join('');
         };
 
+
+        const [startPart, endPart] = str.split(':');
+
+        const [startHour, startMin] = startPart.split('.').map(Number);
+        const [endHour, endMin] = endPart.split('.').map(Number);
+
+        const startInMinutes = startHour * 60 + startMin;
+        const endInMinutes = endHour * 60 + endMin;
+
+        let isNow = (hours * 60 + minutes > startInMinutes && (hours * 60 + minutes) < endInMinutes && day === id)
+
         lessonDiv.innerHTML = `
-        <div class="lesson-header" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+        <div class="lesson-header" style="${isNow ? "background-color: red;": ""} display: flex; justify-content: space-between; margin-bottom: 10px;">
             <div style="font-size: 11px; color: #777; margin-bottom: 4px;">[ ВРЕМЯ: ${lesson.time || '—'} ]</div>
             <span style="display: flex; gap: 8px;">
                 <div class="drop-trigger" style="color: dimgray; text-decoration: underline; cursor: pointer; display: ${isMasked ? 'inline-block' : 'none'};">сбросить</div>
@@ -366,7 +393,7 @@ class Calendar {
 
             const dayTitle = document.createElement('div');
             dayTitle.className = 'weekly-day-title';
-            dayTitle.textContent = dayData.name.toUpperCase();
+            dayTitle.textContent = WeekDays[dayData.id].toUpperCase();
             dayCard.appendChild(dayTitle);
 
             const lessonsContainer = document.createElement('div');
@@ -374,7 +401,7 @@ class Calendar {
 
             if (dayData.lessons && dayData.lessons.length > 0) {
                 dayData.lessons.forEach(lesson => {
-                    lessonsContainer.appendChild(this.formatLesson(lesson));
+                    lessonsContainer.appendChild(this.formatLesson(lesson, dayData.id));
                 });
             } else {
                 const emptyItem = document.createElement('div');

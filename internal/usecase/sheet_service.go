@@ -150,9 +150,9 @@ func (s *SheetService) parseGroups(ctx context.Context) (map[string]entity.Group
 		}
 
 		days := make([]entity.Day, len(WeekDays))
-		for i, dayName := range WeekDays {
+		for i, _ := range WeekDays {
 			days[i] = entity.Day{
-				Name:    dayName,
+				Id:      i,
 				Lessons: make([]entity.Lesson, 0, 7),
 			}
 		}

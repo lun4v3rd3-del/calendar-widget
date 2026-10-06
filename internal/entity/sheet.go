@@ -9,7 +9,7 @@ type Group struct {
 }
 
 type Day struct {
-	Name    string   `json:"name"`
+	Id      int      `json:"id"`
 	Lessons []Lesson `json:"lessons"`
 }
 
