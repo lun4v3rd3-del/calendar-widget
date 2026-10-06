@@ -2,12 +2,13 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HTML Календарь и Расписание</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div class="main-container">
-    <div>
+    <div class="sidebar-controls">
         <div class="group-selector">
             <label for="group-input" class="group-label">Группа:</label>
             <div class="autocomplete-wrapper">
@@ -16,12 +17,11 @@
             </div>
         </div>
 
-
         <div class="calendar">
             <div class="calendar-header">
-                <button id="post"><</button>
+                <button id="prev">&lt;</button>
                 <div id="month-year"></div>
-                <button id="prev">></button>
+                <button id="post">&gt;</button>
             </div>
 
             <div class="calendar-grid-header">
@@ -37,6 +37,7 @@
 
             <div id="calendar-days" class="calendar-days-container"></div>
         </div>
+
     </div>
 
     <div id="schedule-handler">
@@ -45,7 +46,6 @@
     </div>
 
 </div>
-
 
 <script src="js/script.js"></script>
 </body>

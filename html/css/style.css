@@ -310,20 +310,30 @@ body {
 }
 
 @media (max-width: 850px) {
+    body {
+        padding: 10px;
+    }
     .main-container {
         grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    .sidebar-controls {
+        width: 100%;
     }
     .group-selector, .calendar, #schedule-handler {
-        grid-column: 1;
-        grid-row: auto;
         width: 100%;
-        max-width: 380px;
-        margin: 0 auto 16px auto;
+        max-width: 100%;
+        box-sizing: border-box;
     }
     .group-selector {
+        margin-bottom: 16px;
         border-bottom: 2px solid #000000;
     }
+    .weekly-day-card {
+        flex: 0 0 280px;
+    }
 }
+
 
 /* asasd */
 
