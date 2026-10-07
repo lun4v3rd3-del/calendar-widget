@@ -385,11 +385,6 @@ body {
     }
 }
 
-
-
-
-/* asasd */
-
 .autocomplete-wrapper {
     position: relative;
     width: 100%;
@@ -439,3 +434,345 @@ body {
 .custom-dropdown::-webkit-scrollbar-thumb {
     background: #000000;
 }
+
+.lesson-header > span {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.lesson-time {
+    font-size: 14px;
+}
+
+.lesson-room {
+    background-color: #000000;
+    color: #ffffff;
+    padding: 2px 6px;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.lesson-header .edit,
+.lesson-header .drop {
+    font-size: 15px;
+    text-transform: uppercase;
+    text-decoration: underline;
+    cursor: pointer;
+    user-select: none;
+}
+
+.lesson-header .edit {
+    color: #0000ff;
+    margin-left: auto;
+}
+
+.lesson-header .edit:hover {
+    color: #0000aa;
+    background-color: #e6e6e6;
+}
+
+.lesson-header .drop {
+    color: #ff0000;
+}
+
+.lesson-header .drop:hover {
+    color: #aa0000;
+    background-color: #e6e6e6;
+}
+
+.lesson-header .edit + .drop {
+    margin-left: 0;
+}
+
+.lesson-title {
+    font-size: 16px;
+    line-height: 1.4;
+    margin: 8px 0;
+    word-break: break-word;
+}
+
+.lesson-title.masked {
+    color: #0000ff;
+    border-left: 3px solid #0000ff;
+    padding-left: 6px;
+}
+
+.lesson-link {
+    color: #0000ff;
+    text-decoration: underline;
+}
+
+.lesson-link:hover {
+    background-color: #000000;
+    color: #ffffff;
+}
+
+.lesson-teacher,
+.lesson-type {
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+.lesson-type {
+    text-transform: uppercase;
+    color: #555555;
+}
+
+.edit-zone {
+    background-color: #fafafa;
+    border: 2px dashed #000000;
+    padding: 10px;
+    margin-top: 12px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.lesson-notes-input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 2px solid #000000;
+    padding: 6px 10px;
+    font-family: "Courier New", Courier, monospace, sans-serif;
+    font-weight: bold;
+    font-size: 14px;
+    background-color: #ffffff;
+    outline: none;
+    resize: vertical;
+}
+
+.lesson-notes-input:focus {
+    background-color: #ffffdd;
+}
+
+.edit-zone button {
+    font-family: "Courier New", Courier, monospace, sans-serif;
+    font-weight: bold;
+    font-size: 12px;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    border: 2px solid #000000;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 2px 2px 0px #000000;
+    transition: transform 0.05s ease, box-shadow 0.05s ease;
+}
+
+.edit-zone button:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0px #000000;
+}
+
+.save-btn .cancel-btn {
+    font-size: 14px;
+}
+
+.save-btn {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+.save-btn:hover {
+    background-color: #000000;
+    color: #ffffff;
+}
+
+.cancel-btn {
+    background-color: #ffffff;
+    color: #555555;
+}
+
+.cancel-btn:hover {
+    background-color: #e6e6e6;
+    color: #000000;
+}
+
+.weekly-day-card .lesson-item .lesson-title {
+    font-size: 13px;
+}
+
+.weekly-day-card .lesson-item .edit-zone {
+    padding: 6px;
+}
+
+.weekly-day-card .lesson-item .lesson-notes-input {
+    font-size: 12px;
+    padding: 4px 6px;
+}
+
+.lesson-item.next-lesson {
+    border: 2px solid #000000 !important;
+    box-shadow: 4px 4px 0px #000000 !important;
+}
+
+.lesson-item.next-lesson .lesson-title:not(.masked),
+.lesson-item.next-lesson .lesson-time,
+.lesson-item.next-lesson .lesson-teacher,
+.lesson-item.next-lesson .lesson-type {
+    color: #000000 !important;
+}
+
+.lesson-item.next-lesson .lesson-room {
+    background-color: #000000;
+    color: #00de6f;
+}
+
+#actualLesson {
+    width: 380px;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+}
+
+.actual-lesson-card {
+    background: #ffffff;
+    border: 2px solid #000000;
+    box-shadow: 4px 4px 0px #000000;
+    padding: 14px 16px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-family: "Courier New", Courier, monospace, sans-serif;
+    font-weight: bold;
+    color: #000000;
+}
+
+.actual-lesson-card .lesson-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+
+.actual-lesson-card .lesson-header > span {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.actual-status {
+    display: inline-block;
+    background-color: #ffff00;
+    color: #000000;
+    border: 2px solid #000000;
+    padding: 2px 8px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    user-select: none;
+}
+
+.actual-status.empty {
+    background-color: #ff0000;
+    color: #ffffff;
+}
+
+.actual-lesson-card .lesson-time {
+    font-size: 14px;
+}
+
+.actual-lesson-card .lesson-room {
+    background-color: #000000;
+    color: #ffffff;
+    padding: 2px 6px;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.actual-lesson-card .lesson-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.actual-lesson-card .lesson-title {
+    font-size: 16px;
+    line-height: 1.4;
+    text-transform: uppercase;
+    word-break: break-word;
+    border-top: 2px dashed #000000;
+    padding-top: 8px;
+    margin-top: 4px;
+    cursor: default !important;
+}
+
+.actual-lesson-card .lesson-title.masked {
+    color: #0000ff;
+    border-left: 3px solid #0000ff;
+    padding-left: 6px;
+}
+
+.actual-lesson-card .lesson-teacher,
+.actual-lesson-card .lesson-type {
+    font-size: 13px;
+}
+
+.actual-lesson-card .lesson-type {
+    text-transform: uppercase;
+    color: #555555;
+}
+
+.actual-lesson-card.design-empty {
+    background-color: #ffffff;
+}
+
+@media (max-width: 850px) {
+    #actualLesson {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-bottom: 16px;
+    }
+}
+
+.status-badge {
+    display: inline-block;
+    align-self: flex-start;
+    background-color: #ffff00;
+    color: #000000;
+    border: 2px solid #000000;
+    box-shadow: 2px 2px 0px #000000;
+    padding: 2px 8px;
+    font-family: "Courier New", Courier, monospace, sans-serif;
+    font-weight: bold;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    user-select: none;
+    width: fit-content;
+}
+
+.status-badge.empty {
+    background-color: #ff0000 !important;
+    color: #ffffff !important;
+}
+
+.status-badge.current {
+    background-color: #00de6f !important;
+    color: #000000 !important;
+}
+
+.lesson-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    width: 100%;
+}
+
+.lesson-header > span {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.lesson-header .edit {
+    margin-left: auto;
+}
+

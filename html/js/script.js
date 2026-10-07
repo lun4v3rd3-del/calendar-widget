@@ -1,554 +1,469 @@
-const WeekDays = [
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday"
-];
-
+const WeekDays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
 class Calendar {
     constructor() {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
         this.socket = new WebSocket(wsProtocol + window.location.host + '/ws');
-        this.initSocket();
 
         this.calendarDays = document.getElementById('calendar-days');
         this.monthYearHeader = document.getElementById('month-year');
-        this.selectedElement = null;
-        this.a = [];
+        this.titleHandler = document.querySelector(".schedule-title");
+        this.contentHandler = document.querySelector(".schedule-content");
+
         this.date = new Date();
-        this.selectedGroup = "";
+        this.selectedElement = null;
+        this.allDayDivs = [];
+        this.selectedGroup = localStorage.getItem("group") || "";
+        this.schedule = null;
 
-        this.shedule = null;
+        this._initSocket();
     }
 
-    initSocket() {
-        this.socket.onmessage = (event) => {
-            this.handleServerMessage(event.data);
+    _initSocket() {
+        this.socket.onmessage = (e) => {
+            this.schedule = JSON.parse(e.data);
+            if (this.selectedElement && this.allDayDivs.length > 0) {
+                this.changeSelected(this.selectedElement);
+            }
+            this.getNextLesson()
+            this.initActualLesson();
         };
-        this.socket.onopen = () => {
-            this.socket.send("_get_schedule");
-        };
+        this.socket.onopen = () => this.socket.send("_get_schedule");
+
     }
 
-    handleServerMessage(data) {
-        this.shedule = JSON.parse(data);
-        if (this.selectedElement && this.a.length > 0) {
-            this.changeSelected(this.selectedElement);
-        }
+    _getMasks() {
+        return JSON.parse(localStorage.getItem('schedule_masks')) || {};
+    }
+
+    maskLesson(raw, next) {
+        const m = this._getMasks();
+        m[raw] = next;
+        localStorage.setItem('schedule_masks', JSON.stringify(m));
+        this._refreshCurrentSchedule();
+    }
+
+    checkLesson(name) {
+        return this._getMasks()[name];
+    }
+
+    dropLesson(name) {
+        const m = this._getMasks();
+        delete m[name];
+        localStorage.setItem('schedule_masks', JSON.stringify(m));
+        this._refreshCurrentSchedule();
+    }
+
+    _refreshCurrentSchedule() {
+        if (!this.selectedElement) return;
+        this.selectedElement.classList.contains("day")
+            ? this.pullSchedule(this.selectedElement)
+            : this.pullWeekSchedule();
     }
 
     generate() {
-        const year = this.date.getFullYear();
-        const month = this.date.getMonth();
+        if (!this.calendarDays || !this.monthYearHeader) return;
+        const year = this.date.getFullYear(), month = this.date.getMonth();
+        const now = new Date(), today = now.getDate();
+        const isCurrent = now.getFullYear() === year && now.getMonth() === month;
 
-        const now = new Date();
-        const isCurrentMonthAndYear = now.getFullYear() === year && now.getMonth() === month;
-        const today = now.getDate();
-
-        const monthNames = [
-            "ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ",
-            "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРЬ", "ДЕКАБРЬ"
-        ];
-
+        const monthNames = ["ЯНВАРЬ", "ФЕВРАЛЬ", "МАРТ", "АПРЕЛЬ", "МАЙ", "ИЮНЬ", "ИЮЛЬ", "АВГУСТ", "СЕНТЯБРЬ", "ОКТЯБРЬ", "НОЯБРЬ", "ДЕКАБРЬ"];
         this.monthYearHeader.textContent = `${monthNames[month]} ${year}`;
         this.calendarDays.innerHTML = '';
-        this.a = [];
+        this.allDayDivs = [];
 
-        const firstDayOfMonth = new Date(year, month, 1);
-        let startDayOfWeek = firstDayOfMonth.getDay();
-        startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+        const firstDay = new Date(year, month, 1);
+        let startWeekDay = (firstDay.getDay() + 6) % 7;
 
-        const createWeekRow = () => {
-            const week = document.createElement("div");
-            week.className = 'calendar-week';
-
+        const createRow = () => {
+            const row = document.createElement("div");
+            row.className = 'calendar-week';
             const btn = document.createElement("div");
             btn.className = 'week-select-btn';
             btn.textContent = '>>';
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.changeSelected(week);
-            });
-
-            week.appendChild(btn);
-            return week;
+            btn.addEventListener('click', (e) => { e.stopPropagation(); this.changeSelected(row); });
+            row.appendChild(btn);
+            return row;
         };
 
-        let weekDiv = createWeekRow();
+        let currentWeekRow = createRow();
         const totalDays = new Date(year, month + 1, 0).getDate();
 
-        for (let i = startDayOfWeek; i > 0; i--) {
-            const emptyDiv = document.createElement('div');
-            emptyDiv.classList.add('day', 'empty');
-
-            let prevDate = new Date(year, month, 1 - i);
-            emptyDiv.textContent = prevDate.getDate().toString();
-
-            emptyDiv.addEventListener("click", () => {
-                this.date = prevDate;
-                this.generate();
-            });
-
-            this.a.push(emptyDiv);
-            weekDiv.appendChild(emptyDiv);
+        for (let i = startWeekDay; i > 0; i--) {
+            const prevDate = new Date(year, month, 1 - i);
+            currentWeekRow.appendChild(this._createDayDiv(prevDate.getDate(), prevDate, true));
         }
 
         for (let day = 1; day <= totalDays; day++) {
-            const dayDiv = document.createElement('div');
-            dayDiv.classList.add('day');
-            dayDiv.textContent = day;
+            const cDate = new Date(year, month, day);
+            const dayDiv = this._createDayDiv(day, cDate, false, (cDate.getDay() + 6) % 7);
 
-            const currentDayObject = new Date(year, month, day);
-            let dayOfWeek = currentDayObject.getDay();
-            dayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-
-            dayDiv.dataset.dayOfWeek = dayOfWeek;
-
-            if (isCurrentMonthAndYear && day === today) {
+            if (isCurrent && day === today) {
                 this.selectedElement = dayDiv;
                 dayDiv.classList.add('selected');
             }
 
-            this.a.push(dayDiv);
+            currentWeekRow.appendChild(dayDiv);
 
-            dayDiv.addEventListener('click', () => {
-                this.changeSelected(dayDiv);
-            });
-
-            weekDiv.appendChild(dayDiv);
-
-            if (weekDiv.childElementCount >= 8) {
-                this.calendarDays.appendChild(weekDiv);
-                weekDiv = createWeekRow();
+            if (currentWeekRow.childElementCount >= 8) {
+                this.calendarDays.appendChild(currentWeekRow);
+                currentWeekRow = createRow();
             }
         }
 
         let nextMonthDay = 1;
-
-        if (weekDiv.childElementCount > 1) {
-            while (weekDiv.childElementCount < 8) {
-                const emptyDiv = document.createElement('div');
-                emptyDiv.classList.add('day', 'empty');
-
-                const dayValue = nextMonthDay;
-                emptyDiv.textContent = dayValue.toString();
-
-                emptyDiv.addEventListener("click", () => {
-                    this.date = new Date(year, month + 1, dayValue);
-                    this.generate();
-                });
-
-                this.a.push(emptyDiv);
-                weekDiv.appendChild(emptyDiv);
-                nextMonthDay++;
+        if (currentWeekRow.childElementCount > 1) {
+            while (currentWeekRow.childElementCount < 8) {
+                const nDate = new Date(year, month + 1, nextMonthDay);
+                currentWeekRow.appendChild(this._createDayDiv(nextMonthDay++, nDate, true));
             }
-            this.calendarDays.appendChild(weekDiv);
+            this.calendarDays.appendChild(currentWeekRow);
         }
 
-        if (this.shedule && this.selectedElement) {
-            if (this.selectedElement.classList.contains("day")) {
-                this.pullShedule(this.selectedElement);
-            } else if (this.selectedElement.classList.contains("calendar-week")) {
-                this.pullWeekShedule();
-            }
+        if (this.schedule && this.selectedElement) {
+            this.selectedElement.classList.contains("day") ? this.pullSchedule(this.selectedElement) : this.pullWeekSchedule();
         }
     }
 
+    _createDayDiv(text, targetDate, isEmpty, dayOfWeek = null) {
+        const div = document.createElement('div');
+        div.className = `day ${isEmpty ? 'empty' : ''}`;
+        div.textContent = text;
+        if (dayOfWeek !== null) {
+            div.dataset.dayOfWeek = dayOfWeek;
+            div.dataset.fullDate = targetDate.toISOString();
+        }
+
+        div.addEventListener("click", () => {
+            if (isEmpty) {
+                this.date = targetDate;
+                this.generate();
+            } else {
+                this.changeSelected(div);
+            }
+        });
+        this.allDayDivs.push(div);
+        return div;
+    }
 
     changeSelected(div) {
-        if (div.classList.contains("calendar-week")) {
-            this.pullWeekShedule();
-        } else if (div.classList.contains("day")) {
-            if (div.classList.contains("empty")) return;
-            this.pullShedule(div);
-        }
-
-        if (this.selectedElement) {
-            this.selectedElement.classList.remove('selected');
-        }
+        if (div.classList.contains("empty")) return;
+        if (this.selectedElement) this.selectedElement.classList.remove('selected');
 
         div.classList.add('selected');
         this.selectedElement = div;
+
+        div.classList.contains("calendar-week") ? this.pullWeekSchedule() : this.pullSchedule(div);
     }
 
-    pullShedule(dayDiv) {
-        const titleHandler = document.getElementsByClassName("schedule-title")[0];
-        const contentHandler = document.getElementsByClassName("schedule-content")[0];
+    pullSchedule(dayDiv) {
+        if (!this._isValidHandlers()) return;
+        this._clearHandlers();
 
-        if (!titleHandler || !contentHandler) return;
-
-        titleHandler.innerHTML = '';
-        contentHandler.innerHTML = '';
-
-        if (!this.shedule) {
-            contentHandler.textContent = "Данные еще загружаются...";
-            return;
-        }
+        if (!this.schedule) return this.contentHandler.textContent = "Данные еще загружаются...";
+        if (!this.selectedGroup) return this.titleHandler.textContent = "Выберите группу";
 
         const weekDay = parseInt(dayDiv.dataset.dayOfWeek, 10);
-        const groupData = this.shedule.groups[this.selectedGroup];
-        const dayData = groupData && groupData.days ? groupData.days[weekDay] : null;
+        const groupData = this.schedule.groups[this.selectedGroup];
+        const dayData = groupData?.days?.find(d => d.id === weekDay);
 
-        if (!dayData) {
-            titleHandler.textContent = "Нет данных на этот день";
-            return;
-        }
+        if (!dayData) return this.titleHandler.textContent = "Нет данных на этот день";
 
-        titleHandler.textContent = WeekDays[dayData.id].toUpperCase();
+        this.titleHandler.textContent = WeekDays[dayData.id].toUpperCase();
 
-        if (dayData.lessons && dayData.lessons.length > 0) {
-            const container = document.createElement("div");
-            container.classList.add("weekly-day-card");
+        const listContainer = document.createElement('div');
+        listContainer.className = 'lessons-list';
 
-            // 1. Разделяем массив на первый урок и все остальные
-            const [firstLesson, ...otherLessons] = dayData.lessons;
-
-            // 2. Обрабатываем самый первый элемент отдельно
-            if (firstLesson) {
-                container.appendChild(this.formatLesson(firstLesson, dayData.id, "00.00"));
-            }
-
-            // 3. Последовательно обрабатываем остальные элементы
-            otherLessons.forEach((lesson, index) => {
-                // Определяем предыдущий урок, чтобы взять время его окончания
-                const prevLesson = index === 0 ? firstLesson : otherLessons[index - 1];
-                let end = "00.00";
-
-                if (prevLesson && prevLesson.time) {
-                    const timeParts = prevLesson.time.split(':');
-                    if (timeParts.length > 1) {
-                        end = timeParts[1]; // Достаем "hh.mm" конца предыдущего урока
-                    }
-                }
-
-                container.appendChild(this.formatLesson(lesson, dayData.id, end));
-            });
-
-            contentHandler.appendChild(container);
+        if (!dayData.lessons || dayData.lessons.length === 0) {
+            const empty = document.createElement("div");
+            empty.className = "weekly-empty-lessons";
+            empty.textContent = "ЗАНЯТИЙ НЕТ";
+            listContainer.appendChild(empty);
         } else {
-            contentHandler.textContent = "ЗАНЯТИЙ НЕТ";
+            dayData.lessons.forEach(lesson => {
+                listContainer.appendChild(this.formatLesson(lesson));
+            });
         }
+
+        this.contentHandler.appendChild(listContainer);
     }
 
-    formatLesson(lesson, id, prevTime) {
-        let now = new Date();
+    pullWeekSchedule() {
+        if (!this._isValidHandlers()) return;
+        this.titleHandler.textContent = "РАСПИСАНИЕ НА ВСЮ НЕДЕЛЮ";
+        this.contentHandler.innerHTML = '';
 
-        let hours = now.getHours();
-        let minutes = now.getMinutes();
+        if (!this.schedule) return this.contentHandler.textContent = "Данные еще загружаются...";
+        if (!this.selectedGroup) return this.contentHandler.textContent = "Выберите группу";
 
-        // В JS Date.getDay() возвращает: 0 - ВС, 1 - ПН, 2 - ВТ и т.д.
-        // Переводим в ваш формат (0 - ПН, ..., 5 - СБ)
-        let day = now.getDay();
-        day = day === 0 ? 6 : day - 1;
+        const daysData = this.schedule.groups[this.selectedGroup]?.days || [];
+        if (!daysData.length) return this.contentHandler.textContent = "Расписание отсутствует";
 
-        const lessonDiv = document.createElement('div');
-        lessonDiv.className = 'lesson-item';
-        lessonDiv.style.marginBottom = '15px';
+        const grid = document.createElement('div');
+        grid.className = 'weekly-schedule-grid';
 
-        let lessonName = this.checkLesson(lesson.name);
-        let isMasked = true;
+        daysData.forEach(dayData => {
+            const card = document.createElement('div');
+            card.className = 'weekly-day-card';
 
-        if (lessonName === undefined) {
-            lessonName = (lesson.name === null || lesson.name === undefined) ? "Название не указано" : lesson.name;
-            isMasked = false;
-        }
+            const title = document.createElement('div');
+            title.className = 'weekly-day-title';
+            title.textContent = WeekDays[dayData.id].toUpperCase();
+            card.appendChild(title);
 
-        const injectLinksIntoText = (text, links) => {
-            if (!text || text === "Название не указано") return text;
-            if (!links || links.length === 0) return text;
+            const listContainer = document.createElement('div');
+            listContainer.className = 'weekly-lessons-list';
 
+            if (!dayData.lessons || dayData.lessons.length === 0) {
+                const empty = document.createElement("div");
+                empty.className = "weekly-empty-lessons";
+                empty.textContent = "ЗАНЯТИЙ НЕТ";
+                listContainer.appendChild(empty);
+            } else {
+                dayData.lessons.forEach(lesson => {
+                    listContainer.appendChild(this.formatLesson(lesson));
+                });
+            }
+
+            card.appendChild(listContainer);
+            grid.appendChild(card);
+        });
+
+        this.contentHandler.appendChild(grid);
+    }
+
+    formatLesson(lesson) {
+        const div = document.createElement('div');
+        const nextLesson = this.getNextLesson();
+        const isNext = nextLesson && lesson.time === nextLesson.time && lesson.name === nextLesson.name;
+
+        div.className = `lesson-item ${isNext ? 'next-lesson' : ''}`;
+
+        const rawName = lesson.name || "Название не указано";
+        let lessonName = this.checkLesson(rawName);
+        const isMasked = lessonName !== undefined;
+        if (!isMasked) lessonName = rawName;
+
+        const injectLinks = (text, links) => {
+            if (!text || text === "Название не указано" || !links?.length) return text;
             const chars = Array.from(text);
-            const sortedLinks = [...links].sort((a, b) => b.start - a.start);
-
-            sortedLinks.forEach(link => {
-                if (!link || !link.uri) return;
-
-                const start = link.start;
-                const end = link.end;
-
-                if (start >= 0 && end <= chars.length && start < end) {
-                    const anchorText = chars.slice(start, end).join('');
-                    const htmlLink = `<a href="${link.uri}" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: underline;">${anchorText}</a>`;
-                    chars.splice(start, end - start, htmlLink);
+            [...links].sort((a, b) => b.start - a.start).forEach(link => {
+                if (link?.uri && link.start >= 0 && link.end <= chars.length && link.start < link.end) {
+                    const anchor = chars.slice(link.start, link.end).join('');
+                    chars.splice(link.start, link.end - link.start, `<a href="${link.uri}" target="_blank" rel="noopener" class="lesson-link" onclick="event.stopPropagation();">${anchor}</a>`);
                 }
             });
-
             return chars.join('');
         };
 
-        const [startPart, endPart] = lesson.time.split(':');
-        const [prevHour, prevMin] = startPart.split('.').map(Number);
-        const [endHour, endMin] = endPart.split('.').map(Number);
-
-        const startInMinutes = prevHour * 60 + prevMin;
-        const endInMinutes = endHour * 60 + endMin;
-
-        // Корректно проверяем, идет ли пара прямо сейчас
-        let isNow = (hours * 60 + minutes >= startInMinutes && (hours * 60 + minutes) <= endInMinutes && day === id);
-
-        lessonDiv.innerHTML = `
-        <div class="lesson-header" style="${isNow ? "background-color: red; color: white;" : ""} display: flex; justify-content: space-between; margin-bottom: 10px; padding: 4px;">
-            <div style="font-size: 11px; color: ${isNow ? '#fff' : '#777'}; margin-bottom: 4px;">[ ВРЕМЯ: ${lesson.time || '—'} ]</div>
-            <span style="display: flex; gap: 8px;">
-                <div class="drop-trigger" style="color: ${isNow ? '#fff' : 'dimgray'}; text-decoration: underline; cursor: pointer; display: ${isMasked ? 'inline-block' : 'none'};">сбросить</div>
-                <div class="edit-trigger" style="color: ${isNow ? '#fff' : 'blue'}; text-decoration: underline; cursor: pointer;">изменить</div>  
-            </span>
-        </div>
-        <div class="lesson-name" style="font-style: italic; line-height: 1.3;"></div>
-       
-        <div class="edit-form" style="display: none; margin-top: 10px; flex-direction: column; gap: 8px;">
-            <textarea class="edit-input" style="width: 100%; box-sizing: border-box;"></textarea>
-            <div style="display: flex; gap: 8px;">
-                <button class="save-btn" style="cursor: pointer;">Сохранить</button>
-                <button class="cancel-btn" style="cursor: pointer;">Отмена</button>
+         div.innerHTML = `
+            <div class="lesson-header">
+                ${isNext ? `<div class="status-badge">БЛИЖАЙШАЯ ПАРА</div>` : ''}
+                <span>
+                    <span class="lesson-time">${lesson.time || 'Время не указано'}</span>
+                    ${lesson.room ? `<span class="lesson-room">Каб. \${lesson.room}</span>` : ''}
+                    <span class="edit" style="cursor:pointer; margin-left:10px; color:blue; text-decoration:underline;">Изменить</span>
+                    ${isMasked ? `<span class="drop" style="cursor:pointer; margin-left:10px; color:red; text-decoration:underline;">Сбросить</span>` : ''}
+                </span>
             </div>
-        </div>
-    `;
+            <div class="lesson-body">
+                <div class="lesson-title ${isMasked ? 'masked' : ''}" style="cursor: pointer;" title="Кликните, чтобы изменить название пары">
+                    ${injectLinks(lessonName, lesson.links)}
+                </div>
+                ${lesson.teacher ? `<div class="lesson-teacher">Преподаватель: \${lesson.teacher}</div>` : ''}
+                ${lesson.type ? `<div class="lesson-type">\${lesson.type}</div>` : ''}
+                
+                <div class="edit-zone" style="display: none; margin-top: 10px;">
+                    <textarea cols="40" rows="3" class="lesson-notes-input">${lessonName}</textarea>
+                    <div style="margin-top: 5px;">
+                        <button class="save-btn">Сохранить</button>
+                        <button class="cancel-btn" style="margin-left: 5px;">Отмена</button>
+                    </div>
+                </div>
+            </div>
+        `;
 
-        const lessonNameDiv = lessonDiv.querySelector('.lesson-name');
-        lessonNameDiv.innerHTML = injectLinksIntoText(lessonName, lesson.links);
+        if (isNext) {
+            div.style.backgroundColor = "#00de6f";
+            div.style.opacity = "0.8";
+            div.style.border = "2px solid #00d169";
+        }
 
-        const editTrigger = lessonDiv.querySelector('.edit-trigger');
-        const dropTrigger = lessonDiv.querySelector('.drop-trigger');
-        const editForm = lessonDiv.querySelector('.edit-form');
-        const editInput = lessonDiv.querySelector('.edit-input');
-        const saveBtn = lessonDiv.querySelector('.save-btn');
-        const cancelBtn = lessonDiv.querySelector('.cancel-btn');
+        const editZone = div.querySelector('.edit-zone');
+        const textarea = div.querySelector('.lesson-notes-input');
+        const editBtn = div.querySelector('.edit');
+        const dropBtn = div.querySelector('.drop');
+        const saveBtn = div.querySelector('.save-btn');
+        const cancelBtn = div.querySelector('.cancel-btn');
+        const titleZone = div.querySelector('.lesson-title');
 
-        const refreshCurrentView = () => {
-            if (!this.selectedElement) return;
-            if (this.selectedElement.classList.contains("day")) {
-                this.pullShedule(this.selectedElement);
-            } else if (this.selectedElement.classList.contains("calendar-week")) {
-                this.pullWeekShedule();
-            }
+        const openEditor = () => {
+            editZone.style.display = 'block';
+            textarea.focus();
+            textarea.select();
         };
 
-        editTrigger.addEventListener('click', () => {
-            editForm.style.display = 'flex';
-            editTrigger.style.display = 'none';
-            editInput.value = lessonNameDiv.textContent === "Название не указано" ? "" : lessonNameDiv.textContent;
+        const closeEditor = () => {
+            editZone.style.display = 'none';
+        };
+
+        editBtn.addEventListener('click', openEditor);
+        titleZone.addEventListener('click', (e) => {
+            if (e.target.tagName === 'A') return;
+            openEditor();
         });
 
-        cancelBtn.addEventListener('click', () => {
-            editForm.style.display = 'none';
-            editTrigger.style.display = 'block';
-        });
+        cancelBtn.addEventListener('click', closeEditor);
 
-        dropTrigger.addEventListener('click', () => {
-            this.dropLesson(lesson.name);
-            refreshCurrentView();
-        });
+        if (dropBtn) {
+            dropBtn.addEventListener('click', () => {
+                this.dropLesson(rawName);
+            });
+        }
 
         saveBtn.addEventListener('click', () => {
-            const rawData = lesson.name;
-            const newData = editInput.value.trim();
+            const newName = textarea.value.trim();
 
-            this.maskLesson(rawData, newData);
-
-            lessonNameDiv.innerHTML = injectLinksIntoText(newData || 'Название не указано', lesson.links);
-            editForm.style.display = 'none';
-            editTrigger.style.display = 'block';
-
-            refreshCurrentView();
-        });
-
-        return lessonDiv;
-    }
-
-
-
-    _getMasks() {
-        const masksData = localStorage.getItem('schedule_masks');
-        return masksData ? JSON.parse(masksData) : {};
-    }
-
-    maskLesson(rawData, newData) {
-        const masksMap = this._getMasks();
-        masksMap[rawData] = newData;
-        localStorage.setItem('schedule_masks', JSON.stringify(masksMap));
-    }
-
-    checkLesson(lessonName) {
-        const masksMap = this._getMasks();
-        return masksMap[lessonName];
-    }
-
-    dropLesson(lessonName) {
-        const masksMap = this._getMasks();
-        delete masksMap[lessonName];
-        localStorage.setItem('schedule_masks', JSON.stringify(masksMap));
-    }
-
-    pullWeekShedule() {
-        const titleHandler = document.getElementsByClassName("schedule-title")[0];
-        const contentHandler = document.getElementsByClassName("schedule-content")[0];
-
-        if (!titleHandler || !contentHandler) return;
-
-        titleHandler.textContent = "РАСПИСАНИЕ НА ВСЮ НЕДЕЛЮ";
-        contentHandler.innerHTML = '';
-
-        if (!this.shedule) {
-            contentHandler.textContent = "Данные еще загружаются...";
-            return;
-        }
-
-        const groupData = this.shedule.groups[this.selectedGroup];
-        const daysData = groupData ? groupData.days : [];
-
-        if (!daysData || daysData.length === 0) {
-            contentHandler.textContent = "Расписание отсутствует";
-            return;
-        }
-
-        const gridContainer = document.createElement('div');
-        gridContainer.className = 'weekly-schedule-grid';
-
-        daysData.forEach(dayData => {
-            const dayCard = document.createElement('div');
-            dayCard.className = 'weekly-day-card';
-
-            const dayTitle = document.createElement('div');
-            dayTitle.className = 'weekly-day-title';
-            dayTitle.textContent = WeekDays[dayData.id].toUpperCase();
-            dayCard.appendChild(dayTitle);
-
-            const lessonsContainer = document.createElement('div');
-            lessonsContainer.className = 'weekly-lessons-list';
-
-            if (dayData.lessons && dayData.lessons.length > 0) {
-                let [firstLesson, ...otherLessons] = dayData.lessons;
-                if (firstLesson) {
-                    lessonsContainer.appendChild(this.formatLesson(firstLesson, dayData.id, "00.00"));
-                }
-                otherLessons.forEach(lesson => {
-                    let end = lesson.time.split(':')[1]
-                    lessonsContainer.appendChild(this.formatLesson(lesson, dayData.id, end));
-                });
+            if (newName === "") {
+                this.dropLesson(rawName);
             } else {
-                const emptyItem = document.createElement('div');
-                emptyItem.className = 'weekly-empty-lessons';
-                emptyItem.textContent = 'Занятий нет';
-                lessonsContainer.appendChild(emptyItem);
+                this.maskLesson(rawName, newName);
             }
 
-            dayCard.appendChild(lessonsContainer);
-            gridContainer.appendChild(dayCard);
+            closeEditor();
         });
 
-        contentHandler.appendChild(gridContainer);
+        return div;
     }
 
-    initCustomDropdown() {
-        const input = document.getElementById('group-input');
-        const dropdown = document.getElementById('custom-drop-down');
+    _isValidHandlers() { return this.titleHandler && this.contentHandler; }
+    _clearHandlers() { this.titleHandler.innerHTML = ''; this.contentHandler.innerHTML = ''; }
 
+    initCustomDropdown() {
+        const input = document.getElementById('group-input'), dropdown = document.getElementById('custom-drop-down');
         if (!input || !dropdown) return;
 
         const filterGroups = () => {
             const val = input.value.trim().toUpperCase();
             dropdown.innerHTML = '';
+            if (!this.schedule?.groups) return dropdown.style.display = 'none';
 
-            if (!this.shedule || !this.shedule.groups) {
-                dropdown.style.display = 'none';
-                return;
-            }
-
-            const allGroups = Object.keys(this.shedule.groups);
-            const filtered = allGroups.filter(group => group.toUpperCase().includes(val));
-
-            if (filtered.length === 0) {
-                dropdown.style.display = 'none';
-                return;
-            }
+            const filtered = Object.keys(this.schedule.groups).filter(g => g.toUpperCase().includes(val));
+            if (!filtered.length) return dropdown.style.display = 'none';
 
             filtered.forEach(groupName => {
                 const item = document.createElement('div');
                 item.className = 'dropdown-item';
                 item.textContent = groupName;
-
                 item.addEventListener('click', () => {
                     input.value = groupName;
                     this.selectedGroup = groupName;
-                    localStorage.setItem("group", groupName)
+                    localStorage.setItem("group", groupName);
                     dropdown.style.display = 'none';
                     this.generate();
                 });
-
                 dropdown.appendChild(item);
             });
-
             dropdown.style.display = 'block';
         };
 
         input.addEventListener('input', filterGroups);
         input.addEventListener('focus', filterGroups);
-
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.autocomplete-wrapper')) {
-                dropdown.style.display = 'none';
-            }
-        });
+        document.addEventListener('click', (e) => { if (!e.target.closest('.autocomplete-wrapper')) dropdown.style.display = 'none'; });
     }
+
+    getNextLesson() {
+        if (!this.schedule || !this.selectedGroup) return null;
+
+        const now = new Date();
+        const currentDayId = (now.getDay() + 6) % 7;
+        const timeInMinutes = now.getHours() * 60 + now.getMinutes();
+
+        const days = this.schedule.groups[this.selectedGroup].days || [];
+        const actualDay = days.find(day => day.id === currentDayId);
+
+        if (actualDay && Array.isArray(actualDay.lessons)) {
+            const nextLesson = actualDay.lessons.find(lesson => {
+                if (!lesson.time || !lesson.time.includes("-")) return false;
+                const [hours, minutes] = lesson.time.split("-")[1].split(".").map(Number);
+                return (hours * 60 + minutes) > timeInMinutes;
+            });
+
+            if (nextLesson) return nextLesson;
+        }
+
+        const daysCycle = [...days, ...days];
+        const currentDayIdx = days.findIndex(d => d.id === currentDayId);
+
+        if (currentDayIdx !== -1) {
+            const nextDayWithLessons = daysCycle
+                .slice(currentDayIdx + 1)
+                .find(day => Array.isArray(day.lessons) && day.lessons.length > 0);
+
+            if (nextDayWithLessons && nextDayWithLessons.lessons.length > 0) {
+                return nextDayWithLessons.lessons[0];
+            }
+        }
+
+        return null;
+    }
+
+    initActualLesson() {
+        const div = document.getElementById("actualLesson");
+        if (!div) return;
+
+        div.innerHTML = "";
+        const lesson = this.getNextLesson();
+
+        if (!lesson) {
+            div.innerHTML = `
+                <div class="lesson-item design-empty" style="border: 2px solid #000000; box-shadow: 4px 4px 0px #000000; padding: 14px 16px;">
+                    <div class="lesson-header">
+                        <div class="status-badge empty" style="background-color: #ff0000; color: #ffffff; border: 2px solid #000000; padding: 2px 8px; font-size: 13px; text-transform: uppercase;">ПАР НЕТ</div>
+                    </div>
+                    <div class="lesson-body">
+                        <div class="lesson-title" style="border: none; padding-top: 0; font-size: 16px; margin-top: 8px; text-transform: uppercase;">
+                            НА СЕГОДНЯ И БЛИЖАЙШИЕ ДНИ ЗАНЯТИЙ НЕ НАЙДЕНО
+                        </div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        const lessonElement = this.formatLesson(lesson);
+
+        div.appendChild(lessonElement);
+    }
+
+
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    let calendar = new Calendar();
-    let input = document.getElementById("group-input")
-    let groupName = localStorage.getItem("group")
-    calendar.selectedGroup = groupName
-    input.value = groupName
+document.addEventListener('DOMContentLoaded', () => {
+    const calendar = new Calendar();
+    const input = document.getElementById("group-input");
 
+    if (input) input.value = calendar.selectedGroup;
     calendar.generate();
     calendar.initCustomDropdown();
 
-    let prevButton = document.getElementById("prev");
-    let postButton = document.getElementById("post");
+    const changeMonth = (offset) => {
+        calendar.date = new Date(calendar.date.getFullYear(), calendar.date.getMonth() + offset, 1);
+        calendar.generate();
+    };
 
-    if (prevButton) {
-        prevButton.addEventListener("click", () => {
-            let year = calendar.date.getFullYear();
-            let month = calendar.date.getMonth();
-            calendar.date = new Date(year, month - 1, 1);
-            calendar.generate();
-        });
-    }
+    document.getElementById("prev")?.addEventListener("click", () => changeMonth(-1));
+    document.getElementById("post")?.addEventListener("click", () => changeMonth(1));
 
-    if (postButton) {
-        postButton.addEventListener("click", () => {
-            let year = calendar.date.getFullYear();
-            let month = calendar.date.getMonth();
-            calendar.date = new Date(year, month + 1, 1);
-            calendar.generate();
-        });
-    }
-
-    const scheduleHandler = document.getElementById('schedule-handler');
-    const closeBtn = document.getElementById('close-schedule');
-
+    const handler = document.getElementById('schedule-handler');
     window.addEventListener('click', (e) => {
-        const dayElement = e.target.closest('.day');
-        const weekBtnElement = e.target.closest('.week-select-btn');
-
-        const isDay = dayElement && !dayElement.classList.contains('empty');
-        const isWeekBtn = !!weekBtnElement;
-
-        if (isDay || isWeekBtn) {
-            if (window.innerWidth <= 850 && scheduleHandler) {
-                scheduleHandler.classList.add('active');
-                document.body.style.overflow = 'hidden';
-            }
+        if ((e.target.closest('.day:not(.empty)') || e.target.closest('.week-select-btn')) && window.innerWidth <= 850 && handler) {
+            handler.classList.add('active');
+            document.body.style.overflow = 'hidden';
         }
     }, true);
 
-    if (closeBtn && scheduleHandler) {
-        closeBtn.addEventListener('click', () => {
-            scheduleHandler.classList.remove('active');
-            document.body.style.overflow = '';
-        });
-    }
+    document.getElementById('close-schedule')?.addEventListener('click', () => {
+        handler?.classList.remove('active');
+        document.body.style.overflow = '';
+    });
 });
