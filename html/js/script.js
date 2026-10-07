@@ -65,7 +65,6 @@ class Calendar {
 
     generate() {
         if (!this.calendarDays || !this.monthYearHeader) return;
-
         this.initActualLesson();
 
         const year = this.date.getFullYear(), month = this.date.getMonth();
