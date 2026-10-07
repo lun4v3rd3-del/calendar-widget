@@ -25,7 +25,12 @@ class Calendar {
             if (this.selectedElement && this.allDayDivs.length > 0) {
                 this.changeSelected(this.selectedElement);
             }
+
             this.getNextLesson()
+            this.initActualLesson();
+            this.generate();
+            this.initCustomDropdown();
+
         };
         this.socket.onopen = () => this.socket.send("_get_schedule");
     }
@@ -61,8 +66,6 @@ class Calendar {
 
     generate() {
         if (!this.calendarDays || !this.monthYearHeader) return;
-
-        this.initActualLesson();
 
         const year = this.date.getFullYear(), month = this.date.getMonth();
         const now = new Date(), today = now.getDate();
@@ -439,8 +442,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById("group-input");
 
     if (input) input.value = calendar.selectedGroup;
-    calendar.generate();
-    calendar.initCustomDropdown();
 
     const changeMonth = (offset) => {
         calendar.date = new Date(calendar.date.getFullYear(), calendar.date.getMonth() + offset, 1);
