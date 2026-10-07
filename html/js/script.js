@@ -280,8 +280,8 @@ class Calendar {
                 <div class="edit-zone" style="display: none; margin-top: 10px;">
                     <textarea cols="40" rows="3" class="lesson-notes-input">${lessonName}</textarea>
                     <div style="margin-top: 5px;">
-                        <button class="save-btn">Сохранить</button>
                         <button class="cancel-btn" style="margin-left: 5px;">Отмена</button>
+                        <button class="save-btn">Сохранить</button>
                     </div>
                 </div>
             </div>
