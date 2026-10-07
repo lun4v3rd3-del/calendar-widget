@@ -266,8 +266,8 @@ class Calendar {
                 <span>
                     <span class="lesson-time">${lesson.time || 'Время не указано'}</span>
                     ${lesson.room ? `<span class="lesson-room">Каб. \${lesson.room}</span>` : ''}
-                    <span class="edit" style="cursor:pointer; margin-left:10px; color:blue; text-decoration:underline;">Изменить</span>
                     ${isMasked ? `<span class="drop" style="cursor:pointer; margin-left:10px; color:red; text-decoration:underline;">Сбросить</span>` : ''}
+                    <span class="edit" style="cursor:pointer; margin-left:10px; color:blue; text-decoration:underline;">Изменить</span>
                 </span>
             </div>
             <div class="lesson-body">
@@ -280,8 +280,8 @@ class Calendar {
                 <div class="edit-zone" style="display: none; margin-top: 10px;">
                     <textarea cols="40" rows="3" class="lesson-notes-input">${lessonName}</textarea>
                     <div style="margin-top: 5px;">
-                        <button class="cancel-btn" style="margin-left: 5px;">Отмена</button>
                         <button class="save-btn">Сохранить</button>
+                        <button class="cancel-btn" style="margin-left: 5px;">Отмена</button>
                     </div>
                 </div>
             </div>
