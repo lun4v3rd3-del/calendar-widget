@@ -14,7 +14,6 @@ import (
 	"os"
 
 	"github.com/gorilla/websocket"
-	"github.com/joho/godotenv"
 )
 
 var upgrader = websocket.Upgrader{
@@ -65,7 +64,6 @@ var htmlFiles embed.FS
 
 func main() {
 	fmt.Println("initial...")
-	mustLoadEnv()
 	sheetSrv, _ := usecase.NewSheetService(context.Background(), os.Getenv("GSHEET_SPREADSHEET_ID"), os.Getenv("GSHEET_API_KEY"))
 
 	publicFS, err := fs.Sub(htmlFiles, "html")
@@ -105,8 +103,4 @@ func main() {
 	if err != nil {
 		log.Fatal("Не удалось запустить сервер: ", err)
 	}
-}
-
-func mustLoadEnv() {
-	_ = godotenv.Load(".env")
 }

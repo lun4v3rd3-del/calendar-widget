@@ -263,11 +263,12 @@ class Calendar {
          div.innerHTML = `
             <div class="lesson-header">
                 ${isNext ? `<div class="status-badge">БЛИЖАЙШАЯ ПАРА</div>` : ''}
-                <span>
+                <span style="display: flex; justify-content: space-between">
                     <span class="lesson-time">${lesson.time || 'Время не указано'}</span>
-                    ${lesson.room ? `<span class="lesson-room">Каб. \${lesson.room}</span>` : ''}
-                    ${isMasked ? `<span class="drop" style="cursor:pointer; margin-left:10px; color:red; text-decoration:underline;">Сбросить</span>` : ''}
-                    <span class="edit" style="cursor:pointer; margin-left:10px; color:blue; text-decoration:underline;">Изменить</span>
+                    <span>
+                        ${isMasked ? `<span class="drop" style="cursor:pointer; margin-left:10px; color:red; text-decoration:underline;">Сбросить</span>` : ''}
+                        <span class="edit" style="cursor:pointer; margin-left:10px; color:blue; text-decoration:underline;">Изменить</span>
+                    </span>
                 </span>
             </div>
             <div class="lesson-body">
