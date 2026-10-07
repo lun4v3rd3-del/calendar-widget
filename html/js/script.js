@@ -272,7 +272,7 @@ class Calendar {
                 </span>
             </div>
             <div class="lesson-body">
-                <div class="lesson-title ${isMasked ? 'masked' : ''}" style="cursor: pointer;" title="Кликните, чтобы изменить название пары">
+                <div class="lesson-title ${isMasked ? 'masked' : ''}">
                     ${injectLinks(lessonName, lesson.links)}
                 </div>
                 ${lesson.teacher ? `<div class="lesson-teacher">Преподаватель: \${lesson.teacher}</div>` : ''}
