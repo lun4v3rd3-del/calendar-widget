@@ -309,11 +309,6 @@ class Calendar {
         };
 
         editBtn.addEventListener('click', openEditor);
-        titleZone.addEventListener('click', (e) => {
-            if (e.target.tagName === 'A') return;
-            openEditor();
-        });
-
         cancelBtn.addEventListener('click', closeEditor);
 
         if (dropBtn) {
