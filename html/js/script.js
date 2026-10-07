@@ -26,10 +26,8 @@ class Calendar {
                 this.changeSelected(this.selectedElement);
             }
             this.getNextLesson()
-            this.initActualLesson();
         };
         this.socket.onopen = () => this.socket.send("_get_schedule");
-
     }
 
     _getMasks() {
@@ -63,6 +61,9 @@ class Calendar {
 
     generate() {
         if (!this.calendarDays || !this.monthYearHeader) return;
+
+        this.initActualLesson();
+
         const year = this.date.getFullYear(), month = this.date.getMonth();
         const now = new Date(), today = now.getDate();
         const isCurrent = now.getFullYear() === year && now.getMonth() === month;
