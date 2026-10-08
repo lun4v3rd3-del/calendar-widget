@@ -26,7 +26,6 @@ class Calendar {
                 this.changeSelected(this.selectedElement);
             }
 
-            this.getNextLesson()
             this.generate();
             this.initCustomDropdown();
 
@@ -85,7 +84,10 @@ class Calendar {
             const btn = document.createElement("div");
             btn.className = 'week-select-btn';
             btn.textContent = '>>';
-            btn.addEventListener('click', (e) => { e.stopPropagation(); this.changeSelected(row); });
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.changeSelected(row);
+            });
             row.appendChild(btn);
             return row;
         };
@@ -151,6 +153,8 @@ class Calendar {
     }
 
     changeSelected(div) {
+        this.initActualLesson();
+
         if (div.classList.contains("empty")) return;
         if (this.selectedElement) this.selectedElement.classList.remove('selected');
 
@@ -238,7 +242,10 @@ class Calendar {
 
     formatLesson(lesson) {
         const div = document.createElement('div');
-        const nextLesson = this.getNextLesson();
+
+        // ИСПРАВЛЕНО: достаем свойство 'lesson' и переименовываем его в 'nextLesson'
+        const { lesson: nextLesson, day } = this.getNextLesson() || {};
+
         const isNext = nextLesson && lesson.time === nextLesson.time && lesson.name === nextLesson.name;
 
         div.className = `lesson-item ${isNext ? 'next-lesson' : ''}`;
@@ -260,37 +267,35 @@ class Calendar {
             return chars.join('');
         };
 
-         div.innerHTML = `
-            <div class="lesson-header">
-                ${isNext ? `<div class="status-badge">БЛИЖАЙШАЯ ПАРА</div>` : ''}
-                <span style="display: flex; justify-content: space-between">
-                    <span class="lesson-time">${lesson.time || 'Время не указано'}</span>
-                    <span>
-                        ${isMasked ? `<span class="drop" style="cursor:pointer; margin-left:10px; color:red; text-decoration:underline;">Сбросить</span>` : ''}
-                        <span class="edit" style="cursor:pointer; margin-left:10px; color:blue; text-decoration:underline;">Изменить</span>
-                    </span>
+        div.innerHTML = `
+        <div class="lesson-header">
+            ${isNext ? `<div class="status-badge">БЛИЖАЙШАЯ ПАРА</div>` : ''}
+            <span style="display: flex; justify-content: space-between; width: 100%;">
+                <span class="lesson-time">${lesson.time || 'Время не указано'}</span>
+                <span>
+                    ${isMasked ? `<span class="drop" style="cursor:pointer; margin-left:10px; color:red; text-decoration:underline;">Сбросить</span>` : ''}
+                    <span class="edit" style="cursor:pointer; margin-left:10px; color:blue; text-decoration:underline;">Изменить</span>
                 </span>
+            </span>
+        </div>
+        <div class="lesson-body">
+            <div class="lesson-title ${isMasked ? 'masked' : ''}">
+                ${injectLinks(lessonName, lesson.links)}
             </div>
-            <div class="lesson-body">
-                <div class="lesson-title ${isMasked ? 'masked' : ''}">
-                    ${injectLinks(lessonName, lesson.links)}
-                </div>
-                ${lesson.teacher ? `<div class="lesson-teacher">Преподаватель: \${lesson.teacher}</div>` : ''}
-                ${lesson.type ? `<div class="lesson-type">\${lesson.type}</div>` : ''}
-                
-                <div class="edit-zone" style="display: none; margin-top: 10px;">
-                    <textarea cols="40" rows="3" class="lesson-notes-input">${lessonName}</textarea>
-                    <div style="margin-top: 5px;">
-                        <button class="save-btn">Сохранить</button>
-                        <button class="cancel-btn" style="margin-left: 5px;">Отмена</button>
-                    </div>
+            
+            <div class="edit-zone" style="display: none; margin-top: 10px;">
+                <textarea cols="40" rows="3" class="lesson-notes-input">${lessonName}</textarea>
+                <div style="margin-top: 5px;">
+                    <button class="save-btn">Сохранить</button>
+                    <button class="cancel-btn" style="margin-left: 5px;">Отмена</button>
                 </div>
             </div>
-        `;
+        </div>
+    `;
 
         if (isNext) {
             div.style.backgroundColor = "#00de6f";
-            div.style.opacity = "0.8";
+            div.style.opacity = "0.9";
             div.style.border = "2px solid #00d169";
         }
 
@@ -300,7 +305,14 @@ class Calendar {
         const dropBtn = div.querySelector('.drop');
         const saveBtn = div.querySelector('.save-btn');
         const cancelBtn = div.querySelector('.cancel-btn');
-        const titleZone = div.querySelector('.lesson-title');
+        const controlsZone = div.querySelector('.controls-zone');
+
+        if (editZone) {
+            editZone.addEventListener('click', (e) => e.stopPropagation());
+        }
+        if (controlsZone) {
+            controlsZone.addEventListener('click', (e) => e.stopPropagation());
+        }
 
         const openEditor = () => {
             editZone.style.display = 'block';
@@ -323,21 +335,25 @@ class Calendar {
 
         saveBtn.addEventListener('click', () => {
             const newName = textarea.value.trim();
-
             if (newName === "") {
                 this.dropLesson(rawName);
             } else {
                 this.maskLesson(rawName, newName);
             }
-
             closeEditor();
         });
 
         return div;
     }
 
-    _isValidHandlers() { return this.titleHandler && this.contentHandler; }
-    _clearHandlers() { this.titleHandler.innerHTML = ''; this.contentHandler.innerHTML = ''; }
+    _isValidHandlers() {
+        return this.titleHandler && this.contentHandler;
+    }
+
+    _clearHandlers() {
+        this.titleHandler.innerHTML = '';
+        this.contentHandler.innerHTML = '';
+    }
 
     initCustomDropdown() {
         const input = document.getElementById('group-input'), dropdown = document.getElementById('custom-drop-down');
@@ -369,11 +385,13 @@ class Calendar {
 
         input.addEventListener('input', filterGroups);
         input.addEventListener('focus', filterGroups);
-        document.addEventListener('click', (e) => { if (!e.target.closest('.autocomplete-wrapper')) dropdown.style.display = 'none'; });
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.autocomplete-wrapper')) dropdown.style.display = 'none';
+        });
     }
 
     getNextLesson() {
-        if (!this.schedule || !this.selectedGroup) return null;
+        if (!this.schedule || !this.selectedGroup) return { lesson: null, day: null };
 
         const now = new Date();
         const currentDayId = (now.getDay() + 6) % 7;
@@ -385,11 +403,16 @@ class Calendar {
         if (actualDay && Array.isArray(actualDay.lessons)) {
             const nextLesson = actualDay.lessons.find(lesson => {
                 if (!lesson.time || !lesson.time.includes("-")) return false;
-                const [hours, minutes] = lesson.time.split("-")[1].split(".").map(Number);
+
+                // Безопасный парсинг времени окончания
+                const timeParts = lesson.time.split("-");
+                if (timeParts.length < 2) return false;
+
+                const [hours, minutes] = timeParts[1].split(".").map(Number);
                 return (hours * 60 + minutes) > timeInMinutes;
             });
 
-            if (nextLesson) return nextLesson;
+            if (nextLesson) return { lesson: nextLesson, day: actualDay };
         }
 
         const daysCycle = [...days, ...days];
@@ -401,19 +424,21 @@ class Calendar {
                 .find(day => Array.isArray(day.lessons) && day.lessons.length > 0);
 
             if (nextDayWithLessons && nextDayWithLessons.lessons.length > 0) {
-                return nextDayWithLessons.lessons[0];
+                return { lesson: nextDayWithLessons.lessons[0], day: nextDayWithLessons };
             }
         }
 
-        return null;
+        return { lesson: null, day: null };
     }
+
+
 
     initActualLesson() {
         const div = document.getElementById("actualLesson");
         if (!div) return;
 
         div.innerHTML = "";
-        const lesson = this.getNextLesson();
+        const {lesson, day} = this.getNextLesson() || {};
 
         if (!lesson) {
             div.innerHTML = `
@@ -433,9 +458,57 @@ class Calendar {
         const lessonElement = this.formatLesson(lesson);
 
         div.appendChild(lessonElement);
+
+        div.addEventListener("click", () => {
+            if (!lesson || !day) {
+                div.innerHTML = `
+                <div class="lesson-item design-empty" style="border: 2px solid #000000; box-shadow: 4px 4px 0px #000000; padding: 14px 16px;">
+                    <div class="lesson-header">
+                        <div class="status-badge empty" style="background-color: #ff0000; color: #ffffff; border: 2px solid #000000; padding: 2px 8px; font-size: 13px; text-transform: uppercase;">ПАР НЕТ</div>
+                    </div>
+                    <div class="lesson-body">
+                        <div class="lesson-title" style="border: none; padding-top: 0; font-size: 16px; margin-top: 8px; text-transform: uppercase;">
+                            НА СЕГОДНЯ И БЛИЖАЙШИЕ ДНИ ЗАНЯТИЙ НЕ НАЙДЕНО
+                        </div>
+                    </div>
+                </div>
+            `;
+                return;
+            }
+
+            const now = new Date();
+            const actualWeekDay = (now.getDay() + 6) % 7;
+
+            let deltaDays = day.id - actualWeekDay;
+            if (day.id < actualWeekDay) {
+                deltaDays += 7;
+            }
+
+            const targetDate = new Date(now);
+            targetDate.setDate(now.getDate() + deltaDays);
+
+            if (now.getMonth() !== targetDate.getMonth()) {
+                const postBtn = document.getElementById("post");
+                if (postBtn) postBtn.click();
+            }
+
+            const dayDivs = document.getElementsByClassName("day");
+            const getDayDiv = () => {
+                const targetDayString = targetDate.getDate().toString();
+                for (let dayEl of dayDivs) {
+                    if (dayEl.textContent.trim() === targetDayString) {
+                        return dayEl;
+                    }
+                }
+                return null;
+            };
+
+            const targetDiv = getDayDiv();
+            if (targetDiv) {
+                this.changeSelected(targetDiv);
+            }
+        });
     }
-
-
 }
 
 document.addEventListener('DOMContentLoaded', () => {
