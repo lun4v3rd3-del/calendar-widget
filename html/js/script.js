@@ -2,9 +2,9 @@ const WeekDays = ["monday", "tuesday", "wednesday", "thursday", "friday", "satur
 
 class Calendar {
     constructor() {
-        // const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-        // this.socket = new WebSocket(wsProtocol + window.location.host + '/ws');
-        this.socket = new WebSocket('ws://localhost:8080/ws');
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+        this.socket = new WebSocket(wsProtocol + window.location.host + '/ws');
+        // this.socket = new WebSocket('ws://localhost:8080/ws');
 
         this.calendarDays = document.getElementById('calendar-days');
         this.monthYearHeader = document.getElementById('month-year');
