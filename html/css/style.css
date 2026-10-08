@@ -276,6 +276,7 @@ body {
     max-height: 400px;
     overflow-y: auto;
     padding-right: 4px;
+    padding-bottom: 40px;
 }
 
 .weekly-lessons-list::-webkit-scrollbar {
@@ -775,4 +776,5 @@ body {
 .lesson-header .edit {
     margin-left: auto;
 }
+
 
