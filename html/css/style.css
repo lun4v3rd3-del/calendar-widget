@@ -288,6 +288,10 @@ body {
     border-radius: 3px;
 }
 
+.lessons-list {
+    padding-bottom: 40px;
+}
+
 .weekly-empty-lessons {
     font-style: italic;
     color: #777;
